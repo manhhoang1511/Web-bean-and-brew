@@ -1,0 +1,46 @@
+# Quy trình Vibe Coding
+
+Tài liệu ghi lại cách dự án được xây dựng theo phương pháp "Vibe Coding": sinh viên đóng vai **Product Manager / Reviewer**, AI Agent (Claude Code) viết mã; con người ra yêu cầu, kiểm duyệt, kiểm thử và yêu cầu sửa.
+
+## 1. Các giai đoạn
+
+| # | Giai đoạn | Việc của người | Việc của AI Agent |
+|---|---|---|---|
+| 1 | Phân tích đề | Cung cấp đề bài, chọn lĩnh vực (cà phê) | Đề xuất stack, mô hình dữ liệu, danh sách API |
+| 2 | Backend | Duyệt schema CSDL, quy tắc nghiệp vụ (giá do server tính, luồng trạng thái) | Sinh models, schemas, routers, seed |
+| 3 | Kiểm thử backend | Yêu cầu test cho các nghiệp vụ quan trọng | Viết `tests/test_api.py`, chạy & sửa |
+| 4 | Frontend | Mô tả giao diện mong muốn (hiện đại, tông màu cà phê, mobile) | Sinh trang, component, store |
+| 5 | Kiểm thử E2E | Duyệt ảnh chụp màn hình từng trang | Chạy trình duyệt tự động, chụp màn hình, đọc lỗi console |
+| 6 | Tài liệu | Yêu cầu tài liệu phục vụ bảo vệ | Viết README, ARCHITECTURE |
+
+## 2. Mẫu prompt hiệu quả đã dùng
+
+**Prompt khởi tạo (đặt ngữ cảnh):**
+> Bạn là chuyên gia full-stack. Xây website bán cà phê với FastAPI + SQLAlchemy + SQLite và React + TypeScript + Tailwind. Yêu cầu: [dán đề bài]. Ràng buộc: giá luôn tính ở server; trừ kho khi đặt, hoàn kho khi hủy; trạng thái đơn chỉ đi pending → shipping → completed hoặc cancelled.
+
+**Prompt theo từng phần nhỏ (quản lý context):**
+> Viết router `orders.py`: tạo đơn trong 1 transaction, kiểm tra tồn kho, áp mã giảm giá, thanh toán thẻ giả lập kiểm tra Luhn; thẻ 4000 0000 0000 0002 luôn bị từ chối.
+
+**Prompt kiểm thử:**
+> Viết pytest dùng SQLite in-memory, kiểm tra: tính tiền + coupon + phí ship, không bán vượt tồn kho, user thường gọi API admin bị 403, admin không thể chuyển pending → completed.
+
+**Prompt sửa lỗi (đưa đúng bằng chứng):**
+> Trang chủ trắng. Console: "destroy is not a function", API /api/categories trả 500 với traceback: [dán]. Tìm nguyên nhân gốc và sửa, thêm test để lỗi không tái diễn.
+
+## 3. Lỗi phát hiện khi kiểm duyệt code AI (và cách sửa)
+
+Đây là minh chứng rằng code AI **cần được review và test**, không chấp nhận mù quáng:
+
+| Lỗi | Phát hiện bằng | Nguyên nhân | Sửa |
+|---|---|---|---|
+| `GET /api/categories` trả 500 | Chụp màn hình thấy trang trắng → đọc log backend | Truyền `product_count` hai lần khi dựng `CategoryWithCount` | Validate bằng `CategoryOut` rồi mới thêm `product_count`; thêm test `test_categories_with_product_count` |
+| Cả app trắng trang | Đọc console trình duyệt | `useEffect(() => window.scrollTo(0,0))` trả về giá trị thay vì hàm cleanup | Bọc trong `{ }`; thêm `ErrorBoundary` để lỗi 1 component không làm sập cả trang |
+| Biểu đồ doanh thu bị nén vào 1/5 chiều ngang | So sánh ảnh chụp với dữ liệu API | Animation của Recharts 2 lỗi khi chạy với React 19 | `isAnimationActive={false}` |
+| Chatbot offline trả sản phẩm khi khách chỉ nói "xin chào" | Đọc lại logic chấm điểm | Điểm thưởng rating khiến mọi sản phẩm đều > 0 | Tách điểm khớp từ khóa và điểm thưởng; câu chào → hỏi lại nhu cầu |
+| Test đăng ký trùng email trả 422 thay vì 409 | pytest | Dữ liệu test (`full_name="X"`) vi phạm `min_length=2` | Sửa dữ liệu test – API đúng |
+
+## 4. Bài học
+- **Chia nhỏ yêu cầu**: mỗi lần một module (models → router → test → UI) giúp AI giữ đúng ngữ cảnh.
+- **Ràng buộc nghiệp vụ phải nói rõ** (giá do server tính, luồng trạng thái) – AI không tự đoán được ý đồ kinh doanh.
+- **Luôn chạy thật**: build TypeScript thành công ≠ app chạy đúng. 2/5 lỗi trên chỉ lộ ra khi mở trình duyệt.
+- **Đưa bằng chứng khi báo lỗi** (log, traceback, ảnh chụp) thay vì mô tả chung chung.

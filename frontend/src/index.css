@@ -1,0 +1,70 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Be Vietnam Pro", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Playfair Display", Georgia, serif;
+
+  --color-cream-50: #fdfbf7;
+  --color-cream-100: #f8f3ea;
+  --color-cream-200: #efe5d3;
+
+  --color-coffee-50: #f7f1ec;
+  --color-coffee-100: #ebdccf;
+  --color-coffee-200: #d6b9a0;
+  --color-coffee-300: #bf9371;
+  --color-coffee-400: #a5714c;
+  --color-coffee-500: #8a5a3a;
+  --color-coffee-600: #6f4630;
+  --color-coffee-700: #573727;
+  --color-coffee-800: #3b2a20;
+  --color-coffee-900: #251a14;
+
+  --color-caramel-400: #e0a35c;
+  --color-caramel-500: #d08a3c;
+  --color-caramel-600: #b5702a;
+
+  --animate-fade-in: fade-in 0.3s ease-out;
+  --animate-slide-up: slide-up 0.3s ease-out;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+body {
+  @apply bg-cream-50 text-coffee-900 antialiased;
+}
+
+@utility btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition
+    disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-caramel-500;
+}
+@utility btn-primary { @apply btn bg-coffee-800 text-cream-50 shadow-sm hover:bg-coffee-700; }
+@utility btn-accent { @apply btn bg-caramel-500 text-white shadow-sm hover:bg-caramel-600; }
+@utility btn-outline { @apply btn border border-coffee-200 bg-white text-coffee-800 hover:border-coffee-400 hover:bg-coffee-50; }
+@utility btn-ghost { @apply btn text-coffee-700 hover:bg-coffee-50; }
+@utility btn-danger { @apply btn bg-red-600 text-white hover:bg-red-700; }
+
+@utility input {
+  @apply w-full rounded-xl border border-coffee-100 bg-white px-3.5 py-2.5 text-sm text-coffee-900 placeholder:text-coffee-300
+    outline-none transition focus:border-caramel-500 focus:ring-4 focus:ring-caramel-500/15;
+}
+@utility label { @apply mb-1.5 block text-sm font-medium text-coffee-700; }
+@utility card { @apply rounded-2xl border border-coffee-100/70 bg-white shadow-[0_1px_3px_rgba(59,42,32,0.06)]; }
+@utility chip { @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium; }
+@utility container-page { @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8; }
+
+/* Markdown trong khung chat */
+.prose-chat p { @apply mb-1.5 last:mb-0; }
+.prose-chat ul { @apply my-1 list-disc space-y-0.5 pl-4; }
+.prose-chat ol { @apply my-1 list-decimal space-y-0.5 pl-4; }
+.prose-chat strong { @apply font-semibold; }
+.prose-chat em { @apply text-xs opacity-70; }
+
+.scrollbar-thin::-webkit-scrollbar { width: 6px; height: 6px; }
+.scrollbar-thin::-webkit-scrollbar-thumb { @apply rounded-full bg-coffee-200; }
