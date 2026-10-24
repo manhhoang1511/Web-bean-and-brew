@@ -4,7 +4,8 @@ import toast from 'react-hot-toast'
 import { BadgeCheck, ChevronRight, MessageSquare, ShieldCheck, ShoppingBag, Truck, Zap } from 'lucide-react'
 import { api, errorMessage, imageUrl } from '../api/client'
 import type { Product, Review } from '../api/types'
-import ProductCard, { addToCartWithToast } from '../components/ProductCard'
+import ProductCard, { HeartButton, addToCartWithToast, defaultVariant } from '../components/ProductCard'
+import { useMeta } from '../lib/meta'
 import { EmptyState, PageLoader, QuantityInput, Spinner, Stars } from '../components/ui'
 import { useAuth } from '../store/auth'
 import { useCart } from '../store/cart'
@@ -139,21 +140,35 @@ export default function ProductDetail() {
   const [notFound, setNotFound] = useState(false)
   const [activeImg, setActiveImg] = useState(0)
   const [qty, setQty] = useState(1)
+  const [variantId, setVariantId] = useState<number | null>(null)
+  const [grind, setGrind] = useState<string | null>(null)
+  const { grind_options, free_shipping_threshold } = useMeta()
   useDocumentTitle(product?.name ?? '')
 
   const load = () =>
-    api.get<Product>(`/api/products/${slug}`).then((r) => setProduct(r.data)).catch(() => setNotFound(true))
+    api.get<Product>(`/api/products/${slug}`).then((r) => { setProduct(r.data); return r.data }).catch(() => { setNotFound(true); return null })
 
   useEffect(() => {
     setProduct(null); setNotFound(false); setActiveImg(0); setQty(1)
-    load()
+    load().then((p) => {
+      setVariantId(p ? defaultVariant(p)?.id ?? null : null)
+      setGrind(p?.has_grind_option ? 'Nguyên hạt' : null)
+    })
     api.get<Product[]>(`/api/products/${slug}/related`).then((r) => setRelated(r.data)).catch(() => {})
   }, [slug]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (notFound) return <EmptyState icon={<ShoppingBag size={30} />} title="Không tìm thấy sản phẩm" action={<Link to="/shop" className="btn-primary">Về cửa hàng</Link>} />
   if (!product) return <PageLoader />
 
-  const off = discountPercent(product.price, product.original_price)
+  // Giá & tồn kho theo biến thể đang chọn
+  const variant = product.variants.find((v) => v.id === variantId) ?? null
+  const price = variant?.price ?? product.price
+  const originalPrice = variant ? variant.original_price : product.original_price
+  const stock = variant?.stock ?? product.stock
+  const off = discountPercent(price, originalPrice)
+  const chip = (selected: boolean, disabled = false) =>
+    `rounded-xl border-2 px-4 py-2 text-sm font-medium transition ${selected ? 'border-caramel-500 bg-caramel-500/10 text-coffee-900'
+      : disabled ? 'cursor-not-allowed border-dashed border-coffee-100 text-coffee-300 line-through' : 'border-coffee-100 hover:border-coffee-300'}`
   const specs = [
     ['Xuất xứ', product.origin], ['Mức rang', product.roast_level], ['Khối lượng', product.weight], ['Danh mục', product.category?.name],
   ].filter(([, v]) => v)
@@ -187,7 +202,10 @@ export default function ProductDetail() {
 
         <div>
           <p className="text-sm font-semibold uppercase tracking-widest text-caramel-600">{product.category?.name}</p>
-          <h1 className="mt-2 font-display text-3xl font-bold leading-tight sm:text-4xl">{product.name}</h1>
+          <div className="mt-2 flex items-start justify-between gap-4">
+            <h1 className="font-display text-3xl font-bold leading-tight sm:text-4xl">{product.name}</h1>
+            <HeartButton product={product} className="h-11 w-11 shrink-0 border border-coffee-100 bg-white" />
+          </div>
           <a href="#reviews" className="mt-3 flex items-center gap-2 text-sm text-coffee-500">
             <Stars value={product.rating_avg} size={16} />
             <span className="font-semibold text-coffee-800">{product.rating_avg.toFixed(1)}</span>
@@ -197,8 +215,8 @@ export default function ProductDetail() {
           </a>
 
           <div className="mt-6 flex items-end gap-3">
-            <p className="text-4xl font-bold text-coffee-900">{formatVND(product.price)}</p>
-            {off > 0 && <p className="pb-1 text-lg text-coffee-300 line-through">{formatVND(product.original_price!)}</p>}
+            <p className="text-4xl font-bold text-coffee-900">{formatVND(price)}</p>
+            {off > 0 && <p className="pb-1 text-lg text-coffee-300 line-through">{formatVND(originalPrice!)}</p>}
           </div>
 
           <p className="mt-6 leading-relaxed text-coffee-600">{product.description}</p>
@@ -214,21 +232,44 @@ export default function ProductDetail() {
             </dl>
           )}
 
-          <div className="mt-8 border-t border-coffee-100 pt-6">
-            <p className="mb-3 text-sm">
-              {product.in_stock ? (
-                <span className={product.stock <= 5 ? 'font-semibold text-amber-600' : 'text-emerald-600'}>
-                  ● {product.stock <= 5 ? `Chỉ còn ${product.stock} sản phẩm` : `Còn hàng (${product.stock})`}
+          <div className="mt-8 space-y-5 border-t border-coffee-100 pt-6">
+            {product.variants.length > 0 && (
+              <div>
+                <p className="mb-2 text-sm font-semibold">Khối lượng</p>
+                <div className="flex flex-wrap gap-2">
+                  {product.variants.map((v) => (
+                    <button key={v.id} className={chip(v.id === variantId, v.stock === 0)} disabled={v.stock === 0}
+                      onClick={() => { setVariantId(v.id); setQty(1) }} title={v.stock === 0 ? 'Hết hàng' : formatVND(v.price)}>
+                      {v.label} <span className="ml-1 text-xs text-coffee-400">{formatVND(v.price)}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {product.has_grind_option && (
+              <div>
+                <p className="mb-2 text-sm font-semibold">Kiểu xay</p>
+                <div className="flex flex-wrap gap-2">
+                  {grind_options.map((g) => (
+                    <button key={g} className={chip(g === grind)} onClick={() => setGrind(g)}>{g}</button>
+                  ))}
+                </div>
+              </div>
+            )}
+            <p className="text-sm">
+              {stock > 0 ? (
+                <span className={stock <= 5 ? 'font-semibold text-amber-600' : 'text-emerald-600'}>
+                  ● {stock <= 5 ? `Chỉ còn ${stock} sản phẩm` : `Còn hàng (${stock})`}
                 </span>
               ) : <span className="font-semibold text-rose-600">● Tạm hết hàng</span>}
             </p>
-            {product.in_stock && (
+            {stock > 0 && (
               <div className="flex flex-wrap gap-3">
-                <QuantityInput value={qty} max={product.stock} onChange={setQty} />
-                <button className="btn-outline h-11 flex-1 px-6" onClick={() => addToCartWithToast(add, product, qty)}>
+                <QuantityInput value={Math.min(qty, stock)} max={stock} onChange={setQty} />
+                <button className="btn-outline h-11 flex-1 px-6" onClick={() => addToCartWithToast(add, product, qty, variant, grind)}>
                   <ShoppingBag size={18} /> Thêm vào giỏ
                 </button>
-                <button className="btn-accent h-11 flex-1 px-6" onClick={() => { add(product, qty); navigate('/cart') }}>
+                <button className="btn-accent h-11 flex-1 px-6" onClick={() => { add(product, qty, variant, grind); navigate('/cart') }}>
                   <Zap size={18} /> Mua ngay
                 </button>
               </div>
@@ -236,7 +277,7 @@ export default function ProductDetail() {
           </div>
 
           <div className="mt-6 grid gap-3 sm:grid-cols-2">
-            <div className="flex items-center gap-3 rounded-xl border border-coffee-100 p-3 text-sm"><Truck size={20} className="text-caramel-600" /> Miễn phí ship đơn từ 500k</div>
+            <div className="flex items-center gap-3 rounded-xl border border-coffee-100 p-3 text-sm"><Truck size={20} className="text-caramel-600" /> Miễn phí ship đơn từ {formatVND(free_shipping_threshold)}</div>
             <div className="flex items-center gap-3 rounded-xl border border-coffee-100 p-3 text-sm"><ShieldCheck size={20} className="text-caramel-600" /> Đổi trả trong 7 ngày</div>
           </div>
         </div>

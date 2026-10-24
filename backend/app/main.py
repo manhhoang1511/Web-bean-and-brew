@@ -4,7 +4,7 @@ from fastapi.staticfiles import StaticFiles
 
 from .config import settings
 from .database import Base, engine
-from .routers import admin, auth, chat, orders, products
+from .routers import admin, auth, chat, orders, products, wishlist
 
 Base.metadata.create_all(bind=engine)
 settings.UPLOAD_DIR.mkdir(exist_ok=True)
@@ -28,6 +28,7 @@ app.include_router(products.router)
 app.include_router(orders.router)
 app.include_router(admin.router)
 app.include_router(chat.router)
+app.include_router(wishlist.router)
 app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")
 
 

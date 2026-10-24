@@ -12,6 +12,7 @@ import Checkout from './pages/Checkout'
 import { Login, Register } from './pages/Auth'
 import { MyOrders, OrderDetail } from './pages/Orders'
 import Profile from './pages/Profile'
+import Wishlist from './pages/Wishlist'
 
 // Trang admin tải riêng (code-splitting) để khách hàng không phải tải recharts
 const AdminLayout = lazy(() => import('./pages/admin/AdminLayout'))
@@ -48,6 +49,7 @@ export default function App() {
             <Route path="orders" element={<RequireAuth><MyOrders /></RequireAuth>} />
             <Route path="orders/:code" element={<RequireAuth><OrderDetail /></RequireAuth>} />
             <Route path="profile" element={<RequireAuth><Profile /></RequireAuth>} />
+            <Route path="wishlist" element={<RequireAuth><Wishlist /></RequireAuth>} />
             <Route path="*" element={<EmptyState icon="☕" title="404 – Không tìm thấy trang" desc="Trang bạn tìm có thể đã bị xóa hoặc đổi đường dẫn." action={<Link to="/" className="btn-primary">Về trang chủ</Link>} />} />
           </Route>
           <Route path="login" element={<Login />} />

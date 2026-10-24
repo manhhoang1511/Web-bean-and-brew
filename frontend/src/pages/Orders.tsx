@@ -3,7 +3,7 @@ import { Link, useParams, useSearchParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { Check, CheckCircle2, ChevronRight, Package, Truck, XCircle } from 'lucide-react'
 import { api, errorMessage, imageUrl } from '../api/client'
-import type { Order, OrderStatus } from '../api/types'
+import type { Order, OrderStatus, Product } from '../api/types'
 import { ConfirmDialog, EmptyState, PageLoader, Spinner, StatusBadge } from '../components/ui'
 import { useCart } from '../store/cart'
 import { PAYMENT_METHOD, PAYMENT_STATUS, formatDate, formatVND } from '../lib/format'
@@ -159,8 +159,12 @@ export function OrderDetail() {
     for (const item of order!.items) {
       if (!item.product_id) continue
       try {
-        const { data } = await api.get(`/api/products/${item.product_id}`)
-        if (data.stock > 0) { add(data, item.quantity); added++ }
+        const { data } = await api.get<Product>(`/api/products/${item.product_id}`)
+        const variant = item.variant_id ? data.variants.find((v) => v.id === item.variant_id) ?? null : null
+        if (data.variants.length && !variant) continue // phân loại cũ đã bị xóa
+        const parts = item.variant_label?.split(' · ') ?? []
+        const grind = data.has_grind_option ? parts.find((x) => x !== variant?.label) ?? 'Nguyên hạt' : null
+        if ((variant?.stock ?? data.stock) > 0) { add(data, item.quantity, variant, grind); added++ }
       } catch { /* sản phẩm đã ngừng bán */ }
     }
     toast[added ? 'success' : 'error'](added ? `Đã thêm ${added} sản phẩm vào giỏ` : 'Các sản phẩm đã hết hàng')
@@ -245,6 +249,7 @@ export function OrderDetail() {
                 {i.product_id ? (
                   <Link to={`/products/${i.product_id}`} className="font-medium hover:text-caramel-600">{i.product_name}</Link>
                 ) : <p className="font-medium">{i.product_name}</p>}
+                {i.variant_label && <p className="text-xs text-coffee-500">{i.variant_label}</p>}
                 <p className="text-sm text-coffee-400">{formatVND(i.unit_price)} × {i.quantity}</p>
               </div>
               <p className="font-semibold">{formatVND(i.line_total)}</p>

@@ -1,16 +1,16 @@
 """Logic nghiệp vụ dùng chung giữa các router."""
 from fastapi import HTTPException, status
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
 from .config import settings
-from .models import Category, Coupon, Product, Review
+from .models import Category, Coupon, OrderItem, Product, ProductVariant, Review
 from .schemas import ProductIn
 from .utils import slugify, strip_accents
 
 
 def build_search_text(p: Product) -> str:
-    parts = [p.name, p.description, p.origin or "", p.roast_level or ""]
+    parts = [p.name, p.description, p.origin or "", p.roast_level or "", p.weight or ""]
     if p.category:
         parts.append(p.category.name)
     return strip_accents(" ".join(parts))
@@ -30,15 +30,39 @@ def unique_slug(db: Session, model, base: str, exclude_id: int | None = None) ->
 def apply_product_data(db: Session, product: Product, data: ProductIn) -> Product:
     if data.category_id is not None and not db.get(Category, data.category_id):
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Danh mục không tồn tại")
-    payload = data.model_dump()
+    payload = data.model_dump(exclude={"variants"})
     payload["images"] = "\n".join(u.strip() for u in payload.pop("images") if u.strip())
     for field, value in payload.items():
         setattr(product, field, value)
     product.slug = unique_slug(db, Product, slugify(data.name), product.id)
     db.flush()
+    _save_variants(db, product, data)
+    db.flush()
     db.refresh(product)
+    product.sync_from_variants()
     product.search_text = build_search_text(product)
     return product
+
+
+def _save_variants(db: Session, product: Product, data: ProductIn) -> None:
+    existing = {v.id: v for v in product.variants}
+    keep: list[ProductVariant] = []
+    for i, v in enumerate(data.variants):
+        variant = existing.get(v.id) if v.id else None
+        if variant is None:
+            variant = ProductVariant(product_id=product.id)
+            db.add(variant)
+        variant.label, variant.price, variant.original_price, variant.stock = v.label, v.price, v.original_price, v.stock
+        variant.sort_order = i
+        keep.append(variant)
+    removed = [vid for vid in existing if vid not in {v.id for v in keep}]
+    if removed:
+        # Đơn hàng cũ vẫn giữ snapshot variant_label
+        db.execute(update(OrderItem).where(OrderItem.variant_id.in_(removed)).values(variant_id=None))
+        for vid in removed:
+            db.delete(existing[vid])
+    db.flush()
+    db.expire(product, ["variants"])
 
 
 def recalc_rating(db: Session, product: Product) -> None:

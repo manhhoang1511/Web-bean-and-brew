@@ -5,7 +5,8 @@ import sys
 from datetime import datetime, timedelta
 
 from app.database import Base, SessionLocal, engine
-from app.models import Category, Coupon, Order, OrderItem, Product, Review, User
+from app.models import Category, Coupon, Order, OrderItem, Product, ProductVariant, Review, User
+from app.schemas import GRIND_OPTIONS
 from app.security import hash_password
 from app.services import build_search_text, recalc_rating
 from app.utils import slugify
@@ -102,6 +103,23 @@ PRODUCTS = [
      "Mousse dâu tây chua ngọt mát lạnh trong hũ thủy tinh, cân bằng vị đậm của cà phê."),
 ]
 
+# Hệ số giá theo khối lượng, tính từ khối lượng gốc trong PRODUCTS
+WEIGHT_FACTORS = {
+    "250g": {"250g": 1, "500g": 1.8, "1kg": 3.4},
+    "500g": {"250g": 0.55, "500g": 1, "1kg": 1.85},
+}
+STOCK_SPLIT = {"250g": 0.3, "500g": 0.5, "1kg": 0.2}
+
+
+def make_variants(base_weight: str, price: int, orig: int | None, stock: int) -> list[ProductVariant]:
+    r = lambda x: int(round(x / 1000) * 1000)  # noqa: E731
+    return [
+        ProductVariant(label=w, price=r(price * f), original_price=r(orig * f) if orig else None,
+                       stock=round(stock * STOCK_SPLIT[w]), sort_order=i)
+        for i, (w, f) in enumerate(WEIGHT_FACTORS[base_weight].items())
+    ]
+
+
 REVIEW_TEXTS = [
     (5, "Rất thơm, đúng chuẩn mô tả. Sẽ ủng hộ tiếp!"),
     (5, "Giao hàng nhanh, đóng gói cẩn thận, chất lượng tuyệt vời."),
@@ -153,7 +171,11 @@ def seed(reset: bool = False) -> None:
             p = Product(name=name, slug=slugify(name), category=cats[ci], price=price, original_price=orig,
                         stock=stock, image_url=IMG.format(img), images="\n".join(IMG.format(x) for x in extra),
                         origin=origin, roast_level=roast, weight=weight, is_featured=feat, description=desc,
-                        created_at=datetime.now() - timedelta(days=60 - i * 2))
+                        has_grind_option=ci == 0, created_at=datetime.now() - timedelta(days=60 - i * 2))
+            if ci in (0, 1) and weight in WEIGHT_FACTORS:
+                p.variants = make_variants(weight, price, orig, stock)
+                p.weight = "250g / 500g / 1kg"
+                p.sync_from_variants()
             p.search_text = build_search_text(p)
             products.append(p)
         db.add_all(products)
@@ -180,8 +202,14 @@ def seed(reset: bool = False) -> None:
             else:
                 status = random.choice(["pending", "shipping", "completed"])
             picks = random.sample(products, random.randint(1, 3))
-            items = [OrderItem(product_id=p.id, product_name=p.name, product_image=p.image_url,
-                               unit_price=p.price, quantity=random.randint(1, 3)) for p in picks]
+            items = []
+            for p in picks:
+                v = random.choice(p.variants) if p.variants else None
+                grind = random.choice(GRIND_OPTIONS) if p.has_grind_option else None
+                label = " · ".join(x for x in [v.label if v else None, grind] if x) or None
+                items.append(OrderItem(product_id=p.id, variant_id=v.id if v else None, product_name=p.name,
+                                       variant_label=label, product_image=p.image_url,
+                                       unit_price=v.price if v else p.price, quantity=random.randint(1, 3)))
             subtotal = sum(i.unit_price * i.quantity for i in items)
             ship = 0 if subtotal >= 500000 else 30000
             method = random.choice(["cod", "card", "qr"])

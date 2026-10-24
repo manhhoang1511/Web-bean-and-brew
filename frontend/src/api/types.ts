@@ -19,7 +19,17 @@ export interface Category {
   product_count?: number
 }
 
+export interface Variant {
+  id: number
+  label: string
+  price: number
+  original_price: number | null
+  stock: number
+}
+
 export interface Product {
+  has_grind_option: boolean
+  variants: Variant[]
   id: number
   name: string
   slug: string
@@ -65,6 +75,8 @@ export type PaymentMethod = 'cod' | 'card' | 'qr'
 export interface OrderItem {
   id: number
   product_id: number | null
+  variant_id: number | null
+  variant_label: string | null
   product_name: string
   product_image: string
   unit_price: number

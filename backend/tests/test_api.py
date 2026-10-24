@@ -184,6 +184,56 @@ def test_review_updates_rating():
     assert p["rating_count"] == 1 and p["rating_avg"] == 2
 
 
+def create_variant_product():
+    ah = admin_headers()
+    r = client.post("/api/admin/products", headers=ah, json={
+        "name": "Arabica Biến Thể", "price": 1, "category_id": 1, "has_grind_option": True,
+        "variants": [{"label": "250g", "price": 100000, "stock": 5}, {"label": "1kg", "price": 350000, "stock": 1}],
+    })
+    assert r.status_code == 201, r.text
+    p = r.json()
+    assert p["price"] == 100000 and p["stock"] == 6  # giá "từ" thấp nhất, tồn kho = tổng
+    return p
+
+
+def test_variant_order_uses_variant_price_and_stock():
+    p = create_variant_product()
+    v250, v1kg = p["variants"]
+    h = register()
+    base = order_payload()
+    # Thiếu variant_id -> lỗi
+    r = client.post("/api/orders", headers=h, json={**base, "items": [{"product_id": p["id"], "quantity": 1}]})
+    assert r.status_code == 400
+    # Kiểu xay không hợp lệ -> lỗi
+    r = client.post("/api/orders", headers=h, json={**base, "items": [
+        {"product_id": p["id"], "variant_id": v250["id"], "grind": "Xay bừa", "quantity": 1}]})
+    assert r.status_code == 400
+    # Vượt tồn kho biến thể 1kg
+    r = client.post("/api/orders", headers=h, json={**base, "items": [
+        {"product_id": p["id"], "variant_id": v1kg["id"], "quantity": 2}]})
+    assert r.status_code == 400
+    r = client.post("/api/orders", headers=h, json={**base, "items": [
+        {"product_id": p["id"], "variant_id": v1kg["id"], "grind": "Xay phin", "quantity": 1}]})
+    assert r.status_code == 201, r.text
+    item = r.json()["items"][0]
+    assert item["unit_price"] == 350000 and item["variant_label"] == "1kg · Xay phin"
+    fresh = client.get(f"/api/products/{p['id']}").json()
+    assert fresh["stock"] == 5 and [v["stock"] for v in fresh["variants"]] == [5, 0]
+    # Hủy -> hoàn kho đúng biến thể
+    client.post(f"/api/orders/{r.json()['code']}/cancel", headers=h)
+    assert [v["stock"] for v in client.get(f"/api/products/{p['id']}").json()["variants"]] == [5, 1]
+
+
+def test_wishlist():
+    h = register()
+    assert client.post("/api/wishlist/1", headers=h).status_code == 204
+    client.post("/api/wishlist/1", headers=h)  # thêm lần 2 không bị trùng
+    assert client.get("/api/wishlist/ids", headers=h).json() == [1]
+    assert client.get("/api/wishlist", headers=h).json()[0]["id"] == 1
+    client.delete("/api/wishlist/1", headers=h)
+    assert client.get("/api/wishlist/ids", headers=h).json() == []
+
+
 def test_chat_offline_fallback(monkeypatch):
     from app.config import settings
     monkeypatch.setattr(settings, "GEMINI_API_KEY", "")

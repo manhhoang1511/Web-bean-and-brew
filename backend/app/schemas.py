@@ -79,6 +79,25 @@ class CategoryWithCount(CategoryOut):
 
 
 # ---------- Product ----------
+GRIND_OPTIONS = ["Nguyên hạt", "Xay phin", "Xay pour-over", "Xay espresso", "Xay French press"]
+
+
+class VariantIn(BaseModel):
+    id: int | None = None  # có id = sửa biến thể cũ (giữ liên kết với đơn hàng cũ)
+    label: str = Field(min_length=1, max_length=60)
+    price: int = Field(gt=0)
+    original_price: int | None = Field(default=None, gt=0)
+    stock: int = Field(ge=0, default=0)
+
+
+class VariantOut(ORMModel):
+    id: int
+    label: str
+    price: int
+    original_price: int | None
+    stock: int
+
+
 class ProductIn(BaseModel):
     name: str = Field(min_length=2, max_length=200)
     description: str = ""
@@ -93,6 +112,8 @@ class ProductIn(BaseModel):
     is_featured: bool = False
     is_active: bool = True
     category_id: int | None = None
+    has_grind_option: bool = False
+    variants: list[VariantIn] = Field(default=[], max_length=10)
 
 
 class ProductPatch(BaseModel):
@@ -123,6 +144,8 @@ class ProductOut(ORMModel):
     rating_avg: float
     rating_count: int
     category: CategoryOut | None
+    has_grind_option: bool
+    variants: list[VariantOut]
     created_at: datetime
 
 
@@ -175,6 +198,8 @@ PaymentMethod = Literal["cod", "card", "qr"]
 
 class CartItemIn(BaseModel):
     product_id: int
+    variant_id: int | None = None
+    grind: str | None = None
     quantity: int = Field(ge=1, le=99)
 
 
@@ -192,7 +217,9 @@ class OrderCreate(BaseModel):
 class OrderItemOut(ORMModel):
     id: int
     product_id: int | None
+    variant_id: int | None
     product_name: str
+    variant_label: str | None
     product_image: str
     unit_price: int
     quantity: int

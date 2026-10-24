@@ -1,17 +1,42 @@
 import { Link } from 'react-router-dom'
-import { ShoppingBag } from 'lucide-react'
+import { Heart, ShoppingBag } from 'lucide-react'
 import toast from 'react-hot-toast'
-import type { Product } from '../api/types'
+import type { Product, Variant } from '../api/types'
 import { imageUrl } from '../api/client'
 import { useCart } from '../store/cart'
+import { useWishlist } from '../store/wishlist'
 import { discountPercent, formatVND } from '../lib/format'
 import { Skeleton, Stars } from './ui'
 
-export function addToCartWithToast(add: ReturnType<typeof useCart.getState>['add'], product: Product, qty = 1) {
-  add(product, qty)
+/** Biến thể mặc định khi thêm nhanh từ thẻ sản phẩm: biến thể còn hàng đầu tiên */
+export const defaultVariant = (p: Product): Variant | null =>
+  p.variants.find((v) => v.stock > 0) ?? p.variants[0] ?? null
+
+export function addToCartWithToast(
+  add: ReturnType<typeof useCart.getState>['add'], product: Product, qty = 1,
+  variant: Variant | null = defaultVariant(product), grind: string | null = product.has_grind_option ? 'Nguyên hạt' : null,
+) {
+  add(product, qty, variant, grind)
+  const label = [variant?.label, grind].filter(Boolean).join(' · ')
   toast.success(
-    <span>Đã thêm <b>{product.name}</b> vào giỏ</span>,
+    <span>Đã thêm <b>{product.name}</b>{label && ` (${label})`} vào giỏ</span>,
     { id: `cart-${product.id}` },
+  )
+}
+
+export function HeartButton({ product, className = '' }: { product: Product; className?: string }) {
+  const liked = useWishlist((s) => s.ids.includes(product.id))
+  const toggle = useWishlist((s) => s.toggle)
+  return (
+    <button
+      onClick={(e) => { e.preventDefault(); toggle(product.id, product.name) }}
+      className={`flex items-center justify-center rounded-full transition hover:scale-110 ${className}`}
+      aria-label={liked ? 'Bỏ yêu thích' : 'Yêu thích'}
+      aria-pressed={liked}
+      title={liked ? 'Bỏ yêu thích' : 'Thêm vào yêu thích'}
+    >
+      <Heart size={18} className={liked ? 'text-rose-500' : 'text-coffee-500'} fill={liked ? 'currentColor' : 'none'} />
+    </button>
   )
 }
 
@@ -38,6 +63,7 @@ export default function ProductCard({ product }: { product: Product }) {
           </span>
         )}
       </Link>
+      <HeartButton product={product} className="absolute right-3 top-3 h-9 w-9 bg-white/90 shadow-sm backdrop-blur" />
 
       <div className="flex flex-1 flex-col p-4">
         <p className="text-xs font-medium uppercase tracking-wide text-caramel-600">{product.category?.name}</p>
@@ -52,7 +78,10 @@ export default function ProductCard({ product }: { product: Product }) {
         </div>
         <div className="mt-auto flex items-end justify-between pt-3">
           <div>
-            <p className="text-lg font-bold text-coffee-900">{formatVND(product.price)}</p>
+            <p className="text-lg font-bold text-coffee-900">
+              {product.variants.length > 1 && <span className="mr-1 text-xs font-medium text-coffee-400">từ</span>}
+              {formatVND(product.price)}
+            </p>
             {off > 0 && <p className="text-xs text-coffee-300 line-through">{formatVND(product.original_price!)}</p>}
           </div>
           <button

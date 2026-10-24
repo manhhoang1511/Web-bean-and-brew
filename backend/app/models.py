@@ -59,17 +59,58 @@ class Product(Base):
     search_text: Mapped[str] = mapped_column(Text, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
+    # Cho phép chọn kiểu xay (nguyên hạt / phin / espresso...) – không đổi giá
+    has_grind_option: Mapped[bool] = mapped_column(Boolean, default=False)
+
     category: Mapped[Category | None] = relationship(back_populates="products")
     reviews: Mapped[list["Review"]] = relationship(back_populates="product", cascade="all, delete-orphan")
+    variants: Mapped[list["ProductVariant"]] = relationship(
+        back_populates="product", cascade="all, delete-orphan", order_by="ProductVariant.sort_order",
+        lazy="selectin",
+    )
 
     @property
     def in_stock(self) -> bool:
         return self.stock > 0
 
+    def sync_from_variants(self) -> None:
+        """Sản phẩm có biến thể: giá hiển thị = giá thấp nhất, tồn kho = tổng các biến thể."""
+        if self.variants:
+            cheapest = min(self.variants, key=lambda v: v.price)
+            self.price, self.original_price = cheapest.price, cheapest.original_price
+            self.stock = sum(v.stock for v in self.variants)
+
     @property
     def gallery(self) -> list[str]:
         extra = [u for u in self.images.split("\n") if u.strip()] if self.images else []
         return [self.image_url, *extra] if self.image_url else extra
+
+
+class ProductVariant(Base):
+    """Biến thể: VD khối lượng 250g / 500g / 1kg, mỗi loại một giá và tồn kho riêng."""
+    __tablename__ = "product_variants"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    product_id: Mapped[int] = mapped_column(ForeignKey("products.id", ondelete="CASCADE"), index=True)
+    label: Mapped[str] = mapped_column(String(60))
+    price: Mapped[int] = mapped_column(Integer)
+    original_price: Mapped[int | None] = mapped_column(Integer)
+    stock: Mapped[int] = mapped_column(Integer, default=0)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
+
+    product: Mapped[Product] = relationship(back_populates="variants")
+
+
+class Wishlist(Base):
+    __tablename__ = "wishlists"
+    __table_args__ = (UniqueConstraint("user_id", "product_id", name="uq_wishlist_user_product"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    product_id: Mapped[int] = mapped_column(ForeignKey("products.id", ondelete="CASCADE"))
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+    product: Mapped[Product] = relationship()
 
 
 class Review(Base):
@@ -131,8 +172,10 @@ class OrderItem(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     order_id: Mapped[int] = mapped_column(ForeignKey("orders.id", ondelete="CASCADE"))
     product_id: Mapped[int | None] = mapped_column(ForeignKey("products.id", ondelete="SET NULL"))
+    variant_id: Mapped[int | None] = mapped_column(ForeignKey("product_variants.id", ondelete="SET NULL"))
     # Lưu snapshot tên/giá tại thời điểm mua để lịch sử đơn không đổi khi sản phẩm bị sửa/xóa
     product_name: Mapped[str] = mapped_column(String(200))
+    variant_label: Mapped[str | None] = mapped_column(String(120))  # VD "500g · Xay phin"
     product_image: Mapped[str] = mapped_column(String(500), default="")
     unit_price: Mapped[int] = mapped_column(Integer)
     quantity: Mapped[int] = mapped_column(Integer)

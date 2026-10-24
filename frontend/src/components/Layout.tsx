@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { ChevronDown, LayoutDashboard, LogOut, Mail, MapPin, Menu, Package, Phone, Search, ShoppingBag, User as UserIcon, X } from 'lucide-react'
+import { ChevronDown, Heart, LayoutDashboard, LogOut, Mail, MapPin, Menu, Package, Phone, Search, ShoppingBag, User as UserIcon, X } from 'lucide-react'
 import { api, imageUrl } from '../api/client'
 import type { Product } from '../api/types'
 import { useAuth } from '../store/auth'
 import { cartCount, useCart } from '../store/cart'
+import { useWishlist } from '../store/wishlist'
 import { formatVND } from '../lib/format'
 import { useDebounce } from '../lib/hooks'
 import ChatWidget from './ChatWidget'
@@ -131,6 +132,7 @@ function UserMenu() {
               <Link to="/admin" className={`${item} font-medium text-caramel-600`}><LayoutDashboard size={16} /> Trang quản trị</Link>
             )}
             <Link to="/orders" className={item}><Package size={16} /> Đơn hàng của tôi</Link>
+            <Link to="/wishlist" className={item}><Heart size={16} /> Yêu thích</Link>
             <Link to="/profile" className={item}><UserIcon size={16} /> Tài khoản</Link>
             <button className={`${item} w-full text-rose-600`} onClick={() => { logout(); navigate('/') }}>
               <LogOut size={16} /> Đăng xuất
@@ -145,6 +147,7 @@ function UserMenu() {
 function Header() {
   const count = useCart((s) => cartCount(s.items))
   const user = useAuth((s) => s.user)
+  const wishCount = useWishlist((s) => s.ids.length)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   useEffect(() => {
@@ -168,6 +171,16 @@ function Header() {
         </nav>
         <div className="hidden max-w-md flex-1 md:block"><SearchBox /></div>
         <div className="ml-auto flex items-center gap-1 sm:gap-2">
+          {user && (
+            <Link to="/wishlist" className="relative hidden rounded-full p-2.5 text-coffee-700 hover:bg-coffee-50 sm:block" aria-label="Yêu thích">
+              <Heart size={22} />
+              {wishCount > 0 && (
+                <span className="absolute right-0.5 top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1 text-[11px] font-bold text-white ring-2 ring-cream-50">
+                  {wishCount}
+                </span>
+              )}
+            </Link>
+          )}
           <Link to="/cart" className="relative rounded-full p-2.5 text-coffee-700 hover:bg-coffee-50" aria-label="Giỏ hàng">
             <ShoppingBag size={22} />
             {count > 0 && (
@@ -189,7 +202,7 @@ function Header() {
             </div>
             <SearchBox onDone={() => setMobileOpen(false)} />
             <nav className="mt-6 flex flex-col gap-1" onClick={() => setMobileOpen(false)}>
-              {[['/', 'Trang chủ'], ['/shop', 'Cửa hàng'], ['/cart', 'Giỏ hàng'], ...(user ? [['/orders', 'Đơn hàng của tôi'], ['/profile', 'Tài khoản']] : [['/login', 'Đăng nhập'], ['/register', 'Đăng ký']])].map(([to, label]) => (
+              {[['/', 'Trang chủ'], ['/shop', 'Cửa hàng'], ['/cart', 'Giỏ hàng'], ...(user ? [['/orders', 'Đơn hàng của tôi'], ['/wishlist', 'Yêu thích'], ['/profile', 'Tài khoản']] : [['/login', 'Đăng nhập'], ['/register', 'Đăng ký']])].map(([to, label]) => (
                 <NavLink key={to} to={to} end className={({ isActive }) => `rounded-xl px-3 py-2.5 font-medium ${isActive ? 'bg-coffee-800 text-white' : 'hover:bg-coffee-50'}`}>
                   {label}
                 </NavLink>
@@ -239,7 +252,13 @@ function Footer() {
 
 export default function Layout() {
   const { pathname } = useLocation()
+  const token = useAuth((s) => s.token)
   useEffect(() => { window.scrollTo(0, 0) }, [pathname])
+  // Đăng nhập -> tải danh sách yêu thích; đăng xuất -> xóa
+  useEffect(() => {
+    if (token) useWishlist.getState().load().catch(() => {})
+    else useWishlist.getState().reset()
+  }, [token])
   return (
     <div className="flex min-h-screen flex-col">
       <Header />

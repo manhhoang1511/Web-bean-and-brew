@@ -9,23 +9,63 @@ import { formatVND } from '../../lib/format'
 import { useDebounce, useDocumentTitle } from '../../lib/hooks'
 import { AdminPageHeader } from './AdminLayout'
 
+type VariantRow = { id?: number; label: string; price: string; original_price: string; stock: string }
+
 type FormState = {
   name: string; description: string; price: string; original_price: string; stock: string
   image_url: string; images: string; origin: string; roast_level: string; weight: string
   is_featured: boolean; is_active: boolean; category_id: string
+  has_grind_option: boolean; variants: VariantRow[]
 }
 
 const EMPTY: FormState = {
   name: '', description: '', price: '', original_price: '', stock: '0', image_url: '', images: '',
   origin: '', roast_level: '', weight: '', is_featured: false, is_active: true, category_id: '',
+  has_grind_option: false, variants: [],
 }
 
 const toForm = (p: Product): FormState => ({
   name: p.name, description: p.description, price: String(p.price), original_price: p.original_price ? String(p.original_price) : '',
   stock: String(p.stock), image_url: p.image_url, images: p.gallery.slice(1).join('\n'), origin: p.origin ?? '',
   roast_level: p.roast_level ?? '', weight: p.weight ?? '', is_featured: p.is_featured, is_active: p.is_active,
-  category_id: p.category ? String(p.category.id) : '',
+  category_id: p.category ? String(p.category.id) : '', has_grind_option: p.has_grind_option,
+  variants: p.variants.map((v) => ({ id: v.id, label: v.label, price: String(v.price), original_price: v.original_price ? String(v.original_price) : '', stock: String(v.stock) })),
 })
+
+function VariantEditor({ rows, onChange }: { rows: VariantRow[]; onChange: (rows: VariantRow[]) => void }) {
+  const update = (i: number, patch: Partial<VariantRow>) => onChange(rows.map((r, idx) => (idx === i ? { ...r, ...patch } : r)))
+  return (
+    <div className="rounded-xl border border-coffee-100 p-4">
+      <div className="mb-3 flex items-center justify-between">
+        <div>
+          <p className="text-sm font-semibold">Phân loại (khối lượng, size…)</p>
+          <p className="text-xs text-coffee-400">Có phân loại thì giá hiển thị = giá thấp nhất, tồn kho = tổng các phân loại.</p>
+        </div>
+        <button type="button" className="btn-outline px-3 py-1.5 text-xs" onClick={() => onChange([...rows, { label: '', price: '', original_price: '', stock: '0' }])}>
+          <Plus size={14} /> Thêm
+        </button>
+      </div>
+      {rows.length > 0 && (
+        <div className="space-y-2">
+          <div className="grid grid-cols-[1fr_1fr_1fr_80px_32px] gap-2 text-xs font-medium text-coffee-400">
+            <span>Tên (VD 500g)</span><span>Giá bán</span><span>Giá gốc</span><span>Tồn kho</span><span />
+          </div>
+          {rows.map((r, i) => (
+            <div key={r.id ?? `new-${i}`} className="grid grid-cols-[1fr_1fr_1fr_80px_32px] gap-2">
+              <input className="input px-2.5 py-2" required value={r.label} onChange={(e) => update(i, { label: e.target.value })} />
+              <input className="input px-2.5 py-2" required type="number" min={1} value={r.price} onChange={(e) => update(i, { price: e.target.value })} />
+              <input className="input px-2.5 py-2" type="number" min={1} value={r.original_price} onChange={(e) => update(i, { original_price: e.target.value })} />
+              <input className="input px-2.5 py-2" required type="number" min={0} value={r.stock} onChange={(e) => update(i, { stock: e.target.value })} />
+              <button type="button" className="rounded-lg text-coffee-400 hover:bg-rose-50 hover:text-rose-600" onClick={() => onChange(rows.filter((_, idx) => idx !== i))} aria-label="Xóa phân loại">
+                <Trash2 size={15} className="mx-auto" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
 
 function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label?: string }) {
   return (
@@ -70,6 +110,15 @@ function ProductForm({ initial, categories, onSaved, onCancel, productId }: {
       category_id: f.category_id ? Number(f.category_id) : null,
       images: f.images.split('\n').map((s) => s.trim()).filter(Boolean),
       origin: f.origin || null, roast_level: f.roast_level || null, weight: f.weight || null,
+      variants: f.variants.map((v) => ({
+        id: v.id, label: v.label, price: Number(v.price), stock: Number(v.stock || 0),
+        original_price: v.original_price ? Number(v.original_price) : null,
+      })),
+    }
+    // Có phân loại: giá/tồn kho chung do server tính lại, gửi giá trị hợp lệ tạm thời
+    if (f.variants.length) {
+      payload.price = Math.min(...payload.variants.map((v) => v.price))
+      payload.stock = 0
     }
     try {
       if (productId) await api.put(`/api/admin/products/${productId}`, payload)
@@ -113,12 +162,16 @@ function ProductForm({ initial, categories, onSaved, onCancel, productId }: {
                 {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
             </div>
-            {input('stock', 'Tồn kho *', { type: 'number', min: 0, required: true })}
+            {f.variants.length ? (
+              <div><label className="label">Tồn kho</label><p className="input bg-cream-100 text-coffee-400">Theo phân loại</p></div>
+            ) : input('stock', 'Tồn kho *', { type: 'number', min: 0, required: true })}
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            {input('price', 'Giá bán (đ) *', { type: 'number', min: 1, required: true })}
-            {input('original_price', 'Giá gốc (đ)', { type: 'number', min: 1, placeholder: 'Để trống nếu không giảm' })}
-          </div>
+          {!f.variants.length && (
+            <div className="grid grid-cols-2 gap-4">
+              {input('price', 'Giá bán (đ) *', { type: 'number', min: 1, required: true })}
+              {input('original_price', 'Giá gốc (đ)', { type: 'number', min: 1, placeholder: 'Để trống nếu không giảm' })}
+            </div>
+          )}
         </div>
       </div>
       {input('image_url', 'URL ảnh chính', { placeholder: 'https://… hoặc tải ảnh lên ở trên' })}
@@ -131,6 +184,7 @@ function ProductForm({ initial, categories, onSaved, onCancel, productId }: {
         {input('roast_level', 'Mức rang')}
         {input('weight', 'Khối lượng / quy cách')}
       </div>
+      <VariantEditor rows={f.variants} onChange={(rows) => set('variants', rows)} />
       <div>
         <label className="label">Ảnh phụ (mỗi dòng 1 URL)</label>
         <textarea className="input font-mono text-xs" rows={2} value={f.images} onChange={(e) => set('images', e.target.value)} />
@@ -138,6 +192,7 @@ function ProductForm({ initial, categories, onSaved, onCancel, productId }: {
       <div className="flex flex-wrap gap-6">
         <label className="flex items-center gap-3 text-sm font-medium"><Toggle checked={f.is_active} onChange={(v) => set('is_active', v)} /> Hiển thị trên cửa hàng</label>
         <label className="flex items-center gap-3 text-sm font-medium"><Toggle checked={f.is_featured} onChange={(v) => set('is_featured', v)} /> Sản phẩm nổi bật</label>
+        <label className="flex items-center gap-3 text-sm font-medium"><Toggle checked={f.has_grind_option} onChange={(v) => set('has_grind_option', v)} /> Cho chọn kiểu xay</label>
       </div>
       <div className="flex justify-end gap-2 border-t border-coffee-100 pt-5">
         <button type="button" className="btn-outline" onClick={onCancel}>Hủy</button>
@@ -189,6 +244,7 @@ export default function AdminProducts() {
   }
 
   const promptStock = (p: Product) => {
+    if (p.variants.length) return setEditing({ id: p.id, form: toForm(p) }) // tồn kho theo phân loại -> mở form
     const v = window.prompt(`Cập nhật tồn kho cho "${p.name}"`, String(p.stock))
     if (v === null) return
     const n = parseInt(v)
@@ -255,7 +311,7 @@ export default function AdminProducts() {
                       <img src={imageUrl(p.image_url)} alt="" className="h-11 w-11 rounded-lg object-cover" />
                       <div className="min-w-0">
                         <p className="max-w-64 truncate font-medium">{p.name}</p>
-                        <p className="text-xs text-coffee-400">{p.category?.name ?? '—'} · #{p.id}</p>
+                        <p className="text-xs text-coffee-400">{p.category?.name ?? '—'} · #{p.id}{p.variants.length > 0 && ` · ${p.variants.length} phân loại`}</p>
                       </div>
                     </div>
                   </td>

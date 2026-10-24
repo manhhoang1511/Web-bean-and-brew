@@ -4,9 +4,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session, joinedload
 
+from ..config import settings
 from ..database import get_db
 from ..models import Category, Order, OrderItem, Product, Review, User
-from ..schemas import CategoryOut, CategoryWithCount, Page, ProductOut, ReviewIn, ReviewOut
+from ..schemas import GRIND_OPTIONS, CategoryOut, CategoryWithCount, Page, ProductOut, ReviewIn, ReviewOut
 from ..security import get_current_user
 from ..services import recalc_rating
 from ..utils import page_count, strip_accents
@@ -21,6 +22,16 @@ SORTS = {
     "rating": Product.rating_avg.desc(),
     "bestseller": Product.sold_count.desc(),
 }
+
+
+@router.get("/meta")
+def meta():
+    """Cấu hình dùng chung cho frontend (tránh hard-code 2 nơi)."""
+    return {
+        "grind_options": GRIND_OPTIONS,
+        "shipping_fee": settings.SHIPPING_FEE,
+        "free_shipping_threshold": settings.FREE_SHIPPING_THRESHOLD,
+    }
 
 
 @router.get("/categories", response_model=list[CategoryWithCount])

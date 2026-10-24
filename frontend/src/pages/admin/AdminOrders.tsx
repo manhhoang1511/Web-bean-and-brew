@@ -162,7 +162,10 @@ export default function AdminOrders() {
               {viewing.items.map((i) => (
                 <div key={i.id} className="flex items-center gap-3 p-3">
                   <img src={imageUrl(i.product_image)} alt="" className="h-11 w-11 rounded-lg object-cover" />
-                  <p className="flex-1 font-medium">{i.product_name}</p>
+                  <div className="flex-1">
+                    <p className="font-medium">{i.product_name}</p>
+                    {i.variant_label && <p className="text-xs text-coffee-400">{i.variant_label}</p>}
+                  </div>
                   <p className="text-coffee-500">{formatVND(i.unit_price)} × {i.quantity}</p>
                   <p className="w-24 text-right font-semibold">{formatVND(i.line_total)}</p>
                 </div>

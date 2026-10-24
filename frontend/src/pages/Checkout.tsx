@@ -6,7 +6,7 @@ import { api, errorMessage, imageUrl } from '../api/client'
 import type { Order, PaymentMethod } from '../api/types'
 import { Spinner } from '../components/ui'
 import { useAuth } from '../store/auth'
-import { cartSubtotal, useCart } from '../store/cart'
+import { cartSubtotal, lineLabel, unitPrice, useCart } from '../store/cart'
 import { FREE_SHIPPING_THRESHOLD, SHIPPING_FEE, formatVND } from '../lib/format'
 import { useDocumentTitle } from '../lib/hooks'
 
@@ -83,7 +83,7 @@ export default function Checkout() {
         payment_method: method,
         coupon_code: coupon?.code,
         card_number: method === 'card' ? card.number : undefined,
-        items: items.map((i) => ({ product_id: i.product.id, quantity: i.quantity })),
+        items: items.map((i) => ({ product_id: i.product.id, variant_id: i.variant?.id ?? null, grind: i.grind, quantity: i.quantity })),
       })
       clear()
       navigate(`/orders/${data.code}?success=1`, { replace: true })
@@ -177,14 +177,17 @@ export default function Checkout() {
           <div className="card sticky top-24 p-6">
             <h2 className="mb-4 text-lg font-semibold">Đơn hàng ({items.length} sản phẩm)</h2>
             <div className="scrollbar-thin max-h-64 space-y-3 overflow-y-auto pr-1">
-              {items.map(({ product: p, quantity }) => (
-                <div key={p.id} className="flex items-center gap-3">
+              {items.map((item) => (
+                <div key={item.key} className="flex items-center gap-3">
                   <div className="relative">
-                    <img src={imageUrl(p.image_url)} alt="" className="h-14 w-14 rounded-lg object-cover" />
-                    <span className="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-coffee-700 px-1 text-[11px] font-bold text-white">{quantity}</span>
+                    <img src={imageUrl(item.product.image_url)} alt="" className="h-14 w-14 rounded-lg object-cover" />
+                    <span className="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-coffee-700 px-1 text-[11px] font-bold text-white">{item.quantity}</span>
                   </div>
-                  <p className="line-clamp-2 flex-1 text-sm">{p.name}</p>
-                  <p className="text-sm font-semibold">{formatVND(p.price * quantity)}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="line-clamp-2 text-sm">{item.product.name}</p>
+                    {lineLabel(item) && <p className="text-xs text-coffee-400">{lineLabel(item)}</p>}
+                  </div>
+                  <p className="text-sm font-semibold">{formatVND(unitPrice(item) * item.quantity)}</p>
                 </div>
               ))}
             </div>

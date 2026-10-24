@@ -155,7 +155,15 @@ def update_product(product_id: int, data: ProductIn, db: Session = Depends(get_d
 def patch_product(product_id: int, data: ProductPatch, db: Session = Depends(get_db)):
     """Cập nhật nhanh: tồn kho (còn/hết hàng), ẩn/hiện, nổi bật."""
     product = _product_or_404(db, product_id)
-    for field, value in data.model_dump(exclude_unset=True).items():
+    changes = data.model_dump(exclude_unset=True)
+    if "stock" in changes and product.variants:
+        if changes["stock"] != 0:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "Sản phẩm có phân loại: sửa tồn kho từng phân loại trong form")
+        for v in product.variants:
+            v.stock = 0
+        product.sync_from_variants()
+        changes.pop("stock")
+    for field, value in changes.items():
         setattr(product, field, value)
     db.commit()
     db.refresh(product)

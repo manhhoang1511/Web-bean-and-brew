@@ -5,7 +5,7 @@ import { api, imageUrl } from '../api/client'
 import type { Product } from '../api/types'
 import { EmptyState, QuantityInput } from '../components/ui'
 import { useAuth } from '../store/auth'
-import { cartCount, cartSubtotal, useCart } from '../store/cart'
+import { cartCount, cartSubtotal, lineLabel, lineStock, unitPrice, useCart } from '../store/cart'
 import { FREE_SHIPPING_THRESHOLD, SHIPPING_FEE, formatVND } from '../lib/format'
 import { useDocumentTitle } from '../lib/hooks'
 
@@ -14,9 +14,9 @@ export function FreeShipProgress({ amount }: { amount: number }) {
   const pct = Math.min(100, (amount / FREE_SHIPPING_THRESHOLD) * 100)
   return (
     <div className="rounded-xl bg-cream-100 p-3">
-      <p className="flex items-center gap-2 text-sm">
-        <Truck size={16} className="text-caramel-600" />
-        {remain > 0 ? <>Mua thêm <b>{formatVND(remain)}</b> để được miễn phí giao hàng</> : <b className="text-emerald-700">Bạn được miễn phí giao hàng! 🎉</b>}
+      <p className="flex items-start gap-2 text-sm">
+        <Truck size={16} className="mt-0.5 shrink-0 text-caramel-600" />
+        <span>{remain > 0 ? <>Mua thêm <b>{formatVND(remain)}</b> để được miễn phí giao hàng</> : <b className="text-emerald-700">Bạn được miễn phí giao hàng! 🎉</b>}</span>
       </p>
       <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-coffee-100">
         <div className="h-full rounded-full bg-caramel-500 transition-all duration-500" style={{ width: `${pct}%` }} />
@@ -36,10 +36,13 @@ export default function Cart() {
   // Cập nhật giá & tồn kho mới nhất khi mở giỏ
   useEffect(() => {
     if (!items.length) return
-    Promise.allSettled(items.map((i) => api.get<Product>(`/api/products/${i.product.id}`))).then((results) => {
+    const ids = [...new Set(items.map((i) => i.product.id))]
+    Promise.allSettled(ids.map((id) => api.get<Product>(`/api/products/${id}`))).then((results) => {
       const fresh = results.flatMap((r) => (r.status === 'fulfilled' ? [r.value.data] : []))
       syncProducts(fresh)
-      results.forEach((r, idx) => r.status === 'rejected' && remove(items[idx].product.id))
+      // Sản phẩm đã ngừng bán -> bỏ khỏi giỏ
+      const gone = ids.filter((_, idx) => results[idx].status === 'rejected')
+      items.filter((i) => gone.includes(i.product.id)).forEach((i) => remove(i.key))
     })
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -52,7 +55,7 @@ export default function Cart() {
     )
   }
 
-  const outOfStock = items.some((i) => i.product.stock === 0)
+  const outOfStock = items.some((i) => lineStock(i) === 0)
 
   return (
     <div className="container-page py-10">
@@ -63,28 +66,35 @@ export default function Cart() {
 
       <div className="grid gap-8 lg:grid-cols-3">
         <div className="space-y-3 lg:col-span-2">
-          {items.map(({ product: p, quantity }) => (
-            <div key={p.id} className="card flex gap-4 p-4">
-              <Link to={`/products/${p.slug}`} className="shrink-0">
-                <img src={imageUrl(p.image_url)} alt={p.name} className="h-24 w-24 rounded-xl object-cover" />
-              </Link>
-              <div className="flex min-w-0 flex-1 flex-col">
-                <div className="flex justify-between gap-3">
-                  <Link to={`/products/${p.slug}`} className="font-semibold hover:text-caramel-600">{p.name}</Link>
-                  <button onClick={() => remove(p.id)} className="h-fit rounded-lg p-1.5 text-coffee-300 hover:bg-rose-50 hover:text-rose-600" aria-label="Xóa">
-                    <Trash2 size={17} />
-                  </button>
-                </div>
-                <p className="text-sm text-coffee-400">{formatVND(p.price)}</p>
-                {p.stock === 0 && <p className="text-sm font-medium text-rose-600">Sản phẩm đã hết hàng – vui lòng xóa khỏi giỏ</p>}
-                {p.stock > 0 && quantity >= p.stock && <p className="text-xs text-amber-600">Đã đạt số lượng tối đa trong kho</p>}
-                <div className="mt-auto flex items-center justify-between pt-2">
-                  <QuantityInput size="sm" value={quantity} max={Math.max(p.stock, 1)} onChange={(v) => setQuantity(p.id, v)} />
-                  <p className="font-bold">{formatVND(p.price * quantity)}</p>
+          {items.map((item) => {
+            const { product: p, quantity, key } = item
+            const stock = lineStock(item), price = unitPrice(item), label = lineLabel(item)
+            return (
+              <div key={key} className="card flex gap-4 p-4">
+                <Link to={`/products/${p.slug}`} className="shrink-0">
+                  <img src={imageUrl(p.image_url)} alt={p.name} className="h-24 w-24 rounded-xl object-cover" />
+                </Link>
+                <div className="flex min-w-0 flex-1 flex-col">
+                  <div className="flex justify-between gap-3">
+                    <div>
+                      <Link to={`/products/${p.slug}`} className="font-semibold hover:text-caramel-600">{p.name}</Link>
+                      {label && <p className="mt-0.5"><span className="chip bg-cream-100 text-coffee-600">{label}</span></p>}
+                    </div>
+                    <button onClick={() => remove(key)} className="h-fit rounded-lg p-1.5 text-coffee-300 hover:bg-rose-50 hover:text-rose-600" aria-label="Xóa">
+                      <Trash2 size={17} />
+                    </button>
+                  </div>
+                  <p className="mt-1 text-sm text-coffee-400">{formatVND(price)}</p>
+                  {stock === 0 && <p className="text-sm font-medium text-rose-600">Đã hết hàng – vui lòng xóa khỏi giỏ</p>}
+                  {stock > 0 && quantity >= stock && <p className="text-xs text-amber-600">Đã đạt số lượng tối đa trong kho</p>}
+                  <div className="mt-auto flex items-center justify-between pt-2">
+                    <QuantityInput size="sm" value={quantity} max={Math.max(stock, 1)} onChange={(v) => setQuantity(key, v)} />
+                    <p className="font-bold">{formatVND(price * quantity)}</p>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
 
         <div>
