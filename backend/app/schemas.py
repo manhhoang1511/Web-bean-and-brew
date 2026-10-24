@@ -301,11 +301,30 @@ class ChatMessage(BaseModel):
     content: str = Field(max_length=2000)
 
 
+class ChatCartLine(BaseModel):
+    """Giỏ hàng hiện tại phía client, gửi kèm để chatbot tư vấn theo ngữ cảnh."""
+    product_id: int
+    variant_label: str | None = None
+    grind: str | None = None
+    quantity: int = Field(ge=1, le=99)
+
+
 class ChatIn(BaseModel):
     messages: list[ChatMessage] = Field(min_length=1, max_length=30)
+    cart: list[ChatCartLine] = Field(default=[], max_length=50)
+
+
+class ChatAction(BaseModel):
+    """Hành động chatbot yêu cầu frontend thực hiện (đã được server kiểm tra hợp lệ)."""
+    type: Literal["add_to_cart"] = "add_to_cart"
+    product: ProductOut
+    variant_id: int | None = None
+    grind: str | None = None
+    quantity: int
 
 
 class ChatOut(BaseModel):
     reply: str
     products: list[ProductOut] = []
+    actions: list[ChatAction] = []
     provider: str

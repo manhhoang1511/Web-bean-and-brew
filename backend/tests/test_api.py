@@ -242,3 +242,41 @@ def test_chat_offline_fallback(monkeypatch):
     body = r.json()
     assert r.status_code == 200 and body["provider"] == "offline"
     assert [p["name"] for p in body["products"]] == ["Robusta Đậm"]
+
+
+def test_chat_add_to_cart_by_voice_is_validated(monkeypatch):
+    from app.config import settings
+    monkeypatch.setattr(settings, "GEMINI_API_KEY", "")
+    monkeypatch.setattr(settings, "OPENAI_API_KEY", "")
+    # Xin 5 cái nhưng kho chỉ còn 2 -> server tự giới hạn
+    r = client.post("/api/chat", json={"messages": [{"role": "user", "content": "thêm 5 gói robusta đậm vào giỏ"}]}).json()
+    assert len(r["actions"]) == 1
+    assert r["actions"][0]["product"]["name"] == "Robusta Đậm" and r["actions"][0]["quantity"] == 2
+    assert "Đã thêm" in r["reply"]
+
+
+def test_chat_resolve_requires_variant():
+    from app.routers.chat import ChatContext, resolve_add_to_cart
+    from app.models import ProductVariant
+    from datetime import datetime
+    p = Product(id=99, name="Arabica", slug="a", price=1, stock=3, has_grind_option=True, description="",
+                image_url="", images="", is_featured=False, is_active=True, sold_count=0, rating_avg=0,
+                rating_count=0, created_at=datetime.now(),
+                variants=[ProductVariant(id=1, label="250g", price=100, stock=3)])
+    ctx = ChatContext(products=[p], coupons=[], user_name=None, cart_text="")
+    action, msg = resolve_add_to_cart(ctx, {"product_id": 99, "quantity": 1})
+    assert action is None and "250g" in msg  # hỏi lại phân loại
+    action, _ = resolve_add_to_cart(ctx, {"product_id": 99, "quantity": 1, "variant": "250G", "grind": "Xay bừa"})
+    assert action.variant_id == 1 and action.grind == "Nguyên hạt"
+
+
+def test_chat_stream_sse(monkeypatch):
+    from app.config import settings
+    monkeypatch.setattr(settings, "GEMINI_API_KEY", "")
+    monkeypatch.setattr(settings, "OPENAI_API_KEY", "")
+    with client.stream("POST", "/api/chat/stream", json={"messages": [{"role": "user", "content": "xin chào"}]}) as r:
+        assert r.headers["content-type"].startswith("text/event-stream")
+        import json as _json
+        events = [_json.loads(line[5:]) for line in r.iter_lines() if line.startswith("data:")]
+    assert events[-1] == {"type": "done", "provider": "offline"}
+    assert "".join(e["text"] for e in events if e["type"] == "delta").startswith("Chào bạn")

@@ -135,8 +135,17 @@ export interface Customer extends User {
   total_spent: number
 }
 
+export interface ChatAction {
+  type: 'add_to_cart'
+  product: Product
+  variant_id: number | null
+  grind: string | null
+  quantity: number
+}
+
 export interface ChatMessage {
   role: 'user' | 'assistant'
   content: string
   products?: Product[]
+  added?: ChatAction[] // sản phẩm chatbot đã thêm vào giỏ trong lượt trả lời này
 }

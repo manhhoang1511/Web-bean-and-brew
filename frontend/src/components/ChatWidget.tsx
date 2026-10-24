@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
-import { Bot, MessageCircle, RotateCcw, Send, ShoppingBag, X } from 'lucide-react'
-import { api, errorMessage, imageUrl } from '../api/client'
+import { Bot, CheckCircle2, MessageCircle, RotateCcw, Send, ShoppingBag, X } from 'lucide-react'
+import { errorMessage, imageUrl } from '../api/client'
+import { streamChat } from '../api/chat'
 import type { ChatMessage, Product } from '../api/types'
 import { useCart } from '../store/cart'
 import { formatVND } from '../lib/format'
@@ -12,7 +13,7 @@ const GREETING: ChatMessage = {
   role: 'assistant',
   content: 'Xin chào 👋 Mình là **Bean** – trợ lý tư vấn của Bean & Brew. Bạn thích cà phê vị gì, pha bằng gì, ngân sách bao nhiêu? Mình sẽ gợi ý ngay!',
 }
-const SUGGESTIONS = ['Cà phê đậm vị pha phin', 'Quà tặng dưới 300k', 'Loại nào chua thanh?', 'Có mã giảm giá không?']
+const SUGGESTIONS = ['Cà phê đậm vị pha phin', 'Loại nào chua thanh?', 'Thêm 1 gói Robusta 500g xay phin vào giỏ', 'Có mã giảm giá không?']
 const STORAGE_KEY = 'bb-chat'
 
 function loadHistory(): ChatMessage[] {
@@ -51,12 +52,14 @@ export default function ChatWidget() {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [provider, setProvider] = useState<string>('')
+  const addToCart = useCart((s) => s.add)
   const endRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     sessionStorage.setItem(STORAGE_KEY, JSON.stringify(messages))
-    endRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages, open])
+    // Đang stream thì cuộn tức thì để không bị giật
+    endRef.current?.scrollIntoView({ behavior: loading ? 'auto' : 'smooth' })
+  }, [messages, open, loading])
 
   const send = async (text: string) => {
     const content = text.trim()
@@ -65,13 +68,32 @@ export default function ChatWidget() {
     setMessages(next)
     setInput('')
     setLoading(true)
+    // Bỏ lời chào mặc định và danh sách sản phẩm trước khi gửi lên server
+    const history = next.filter((m) => m.content !== GREETING.content).map(({ role, content }) => ({ role, content }))
+    const cart = useCart.getState().items.map((i) => ({
+      product_id: i.product.id, variant_label: i.variant?.label ?? null, grind: i.grind, quantity: i.quantity,
+    }))
+    // Cập nhật tin nhắn trợ lý cuối cùng khi có dữ liệu stream mới
+    let reply: ChatMessage = { role: 'assistant', content: '', products: [], added: [] }
+    const render = () => setMessages([...next, { ...reply }])
     try {
-      // Bỏ lời chào mặc định và danh sách sản phẩm trước khi gửi lên server
-      const history = next.filter((m) => m !== GREETING && m.content !== GREETING.content)
-        .map(({ role, content }) => ({ role, content }))
-      const { data } = await api.post<{ reply: string; products: Product[]; provider: string }>('/api/chat', { messages: history })
-      setProvider(data.provider)
-      setMessages([...next, { role: 'assistant', content: data.reply, products: data.products }])
+      await streamChat({ messages: history, cart }, (ev) => {
+        if (ev.type === 'delta') {
+          reply = { ...reply, content: reply.content + ev.text }
+        } else if (ev.type === 'action') {
+          const { product, variant_id, grind, quantity } = ev.action
+          const variant = product.variants.find((v) => v.id === variant_id) ?? null
+          addToCart(product, quantity, variant, grind)
+          reply = { ...reply, added: [...(reply.added ?? []), ev.action] }
+        } else if (ev.type === 'products') {
+          reply = { ...reply, products: ev.products }
+        } else if (ev.type === 'done') {
+          setProvider(ev.provider)
+        }
+        render()
+      })
+      if (!reply.content) reply.content = 'Xin lỗi, mình chưa có câu trả lời. Bạn hỏi lại giúp mình nhé!'
+      render()
     } catch (err) {
       setMessages([...next, { role: 'assistant', content: `⚠️ ${errorMessage(err, 'Trợ lý đang bận, bạn thử lại sau nhé.')}` }])
     } finally {
@@ -109,10 +131,18 @@ export default function ChatWidget() {
           <div className="scrollbar-thin flex-1 space-y-3 overflow-y-auto p-4">
             {messages.map((m, i) => (
               <div key={i} className={`flex flex-col ${m.role === 'user' ? 'items-end' : 'items-start'}`}>
-                <div className={`prose-chat max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${
-                  m.role === 'user' ? 'rounded-br-md bg-coffee-800 text-white' : 'rounded-bl-md border border-coffee-100 bg-white'}`}>
-                  <ReactMarkdown>{m.content}</ReactMarkdown>
-                </div>
+                {(m.content || m.role === 'user') && (
+                  <div className={`prose-chat max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${
+                    m.role === 'user' ? 'rounded-br-md bg-coffee-800 text-white' : 'rounded-bl-md border border-coffee-100 bg-white'}`}>
+                    <ReactMarkdown>{m.content}</ReactMarkdown>
+                  </div>
+                )}
+                {!!m.added?.length && (
+                  <Link to="/cart" className="mt-2 flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-800 hover:bg-emerald-100">
+                    <CheckCircle2 size={16} className="shrink-0" />
+                    Đã thêm {m.added.reduce((n, a) => n + a.quantity, 0)} sản phẩm vào giỏ · <span className="underline">Xem giỏ hàng</span>
+                  </Link>
+                )}
                 {!!m.products?.length && (
                   <div className="scrollbar-thin mt-2 flex max-w-full gap-2 overflow-x-auto pb-1">
                     {m.products.map((p) => <MiniProduct key={p.id} p={p} />)}
@@ -120,7 +150,7 @@ export default function ChatWidget() {
                 )}
               </div>
             ))}
-            {loading && (
+            {loading && !messages[messages.length - 1]?.content && messages[messages.length - 1]?.role !== 'assistant' && (
               <div className="flex w-16 items-center justify-center gap-1 rounded-2xl rounded-bl-md border border-coffee-100 bg-white px-3.5 py-3.5">
                 {[0, 150, 300].map((d) => (
                   <span key={d} className="h-1.5 w-1.5 animate-bounce rounded-full bg-coffee-300" style={{ animationDelay: `${d}ms` }} />
