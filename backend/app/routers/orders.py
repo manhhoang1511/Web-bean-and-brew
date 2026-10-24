@@ -25,10 +25,8 @@ def _luhn_ok(number: str) -> bool:
 
 def _process_mock_payment(method: str, card_number: str | None) -> str:
     """Thanh toán giả lập. Trả về payment_status."""
-    if method == "cod":
-        return "unpaid"
-    if method == "qr":
-        return "paid"  # giả định khách đã quét mã và chuyển khoản
+    if method in ("cod", "qr"):
+        return "unpaid"  # COD: thu khi giao; QR: chờ khách xác nhận chuyển khoản
     number = (card_number or "").replace(" ", "").replace("-", "")
     if not (number.isdigit() and 13 <= len(number) <= 19 and _luhn_ok(number)):
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Số thẻ không hợp lệ")
@@ -146,6 +144,18 @@ def _my_order(db: Session, user: User, code: str) -> Order:
 @router.get("/orders/{code}", response_model=OrderOut)
 def get_order(code: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     return _my_order(db, user, code)
+
+
+@router.post("/orders/{code}/pay", response_model=OrderOut)
+def confirm_qr_payment(code: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Giả lập webhook ngân hàng báo đã nhận chuyển khoản QR."""
+    order = _my_order(db, user, code)
+    if order.payment_method != "qr" or order.payment_status != "unpaid" or order.status == "cancelled":
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Đơn hàng không ở trạng thái chờ thanh toán")
+    order.payment_status = "paid"
+    db.commit()
+    db.refresh(order)
+    return order
 
 
 @router.post("/orders/{code}/cancel", response_model=OrderOut)

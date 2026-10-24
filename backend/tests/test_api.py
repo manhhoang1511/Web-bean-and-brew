@@ -145,8 +145,39 @@ def test_admin_product_crud():
     assert client.get(f"/api/products/{pid}").status_code == 404
 
 
+def complete_order(h, **kw):
+    """Đặt đơn rồi admin giao + hoàn thành."""
+    order = client.post("/api/orders", json=order_payload(**kw), headers=h).json()
+    ah = admin_headers()
+    for s in ("shipping", "completed"):
+        client.patch(f"/api/admin/orders/{order['id']}/status", json={"status": s}, headers=ah)
+    return order
+
+
+def test_only_buyers_can_review():
+    h = register()
+    r = client.post("/api/products/1/reviews", json={"rating": 5, "comment": "Ảo"}, headers=h)
+    assert r.status_code == 403
+    assert client.get("/api/products/1/review-eligibility", headers=h).json() == {"can_review": False}
+    complete_order(h)
+    assert client.get("/api/products/1/review-eligibility", headers=h).json() == {"can_review": True}
+
+
+def test_qr_payment_must_be_confirmed_before_shipping():
+    h = register()
+    order = client.post("/api/orders", json=order_payload(payment_method="qr"), headers=h).json()
+    assert order["payment_status"] == "unpaid"
+    ah = admin_headers()
+    r = client.patch(f"/api/admin/orders/{order['id']}/status", json={"status": "shipping"}, headers=ah)
+    assert r.status_code == 400
+    assert client.post(f"/api/orders/{order['code']}/pay", headers=h).json()["payment_status"] == "paid"
+    r = client.patch(f"/api/admin/orders/{order['id']}/status", json={"status": "shipping"}, headers=ah)
+    assert r.status_code == 200
+
+
 def test_review_updates_rating():
     h = register()
+    complete_order(h)
     client.post("/api/products/1/reviews", json={"rating": 4, "comment": "Ngon"}, headers=h)
     client.post("/api/products/1/reviews", json={"rating": 2, "comment": "Đổi ý"}, headers=h)  # cập nhật, không tạo mới
     p = client.get("/api/products/1").json()

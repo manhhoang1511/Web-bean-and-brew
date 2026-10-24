@@ -135,10 +135,19 @@ def list_reviews(key: str, db: Session = Depends(get_db)):
                       verified_purchase=r.user_id in buyers) for r in reviews]
 
 
+@router.get("/products/{key}/review-eligibility")
+def review_eligibility(key: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    product = _get_product(db, key)
+    return {"can_review": user.id in _purchased_user_ids(db, product.id)}
+
+
 @router.post("/products/{key}/reviews", response_model=ReviewOut, status_code=status.HTTP_201_CREATED)
 def create_review(key: str, data: ReviewIn, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    """Mỗi người dùng 1 đánh giá / sản phẩm; gửi lại sẽ cập nhật đánh giá cũ."""
+    """Chỉ khách đã nhận hàng thành công mới được đánh giá (chống đánh giá ảo).
+    Mỗi người 1 đánh giá / sản phẩm; gửi lại sẽ cập nhật đánh giá cũ."""
     product = _get_product(db, key)
+    if user.id not in _purchased_user_ids(db, product.id):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Bạn cần mua và nhận hàng thành công để đánh giá sản phẩm này")
     review = db.scalar(select(Review).where(Review.user_id == user.id, Review.product_id == product.id))
     if review:
         review.rating, review.comment = data.rating, data.comment
@@ -149,5 +158,4 @@ def create_review(key: str, data: ReviewIn, user: User = Depends(get_current_use
     recalc_rating(db, product)
     db.commit()
     db.refresh(review)
-    return ReviewOut(**ReviewOut.model_validate(review).model_dump(exclude={"verified_purchase"}),
-                     verified_purchase=user.id in _purchased_user_ids(db, product.id))
+    return ReviewOut(**ReviewOut.model_validate(review).model_dump(exclude={"verified_purchase"}), verified_purchase=True)

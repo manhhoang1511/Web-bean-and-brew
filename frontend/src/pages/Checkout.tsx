@@ -166,16 +166,9 @@ export default function Checkout() {
             )}
 
             {method === 'qr' && (
-              <div className="flex flex-col items-center gap-4 rounded-xl bg-cream-100 p-5 text-center animate-fade-in sm:flex-row sm:text-left">
-                <img className="h-36 w-36 rounded-xl bg-white p-2"
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(`BEANBREW|${total}|${user?.email}`)}`} alt="Mã QR thanh toán" />
-                <div className="text-sm">
-                  <p className="font-semibold">Ngân hàng giả lập – Bean & Brew</p>
-                  <p className="text-coffee-500">STK: 0123 456 789</p>
-                  <p className="mt-1">Số tiền: <b className="text-caramel-600">{formatVND(total)}</b></p>
-                  <p className="mt-2 text-xs text-coffee-400">Đây là môi trường demo – bấm “Đặt hàng” để giả lập đã chuyển khoản thành công.</p>
-                </div>
-              </div>
+              <p className="rounded-xl bg-cream-100 p-4 text-sm text-coffee-600 animate-fade-in">
+                📱 Sau khi đặt hàng, mã QR kèm nội dung chuyển khoản sẽ hiển thị. Đơn được giao khi hệ thống xác nhận đã nhận tiền.
+              </p>
             )}
           </section>
         </div>

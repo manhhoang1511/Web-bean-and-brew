@@ -18,8 +18,15 @@ function ReviewSection({ product, onRated }: { product: Product; onRated: () => 
   const [comment, setComment] = useState('')
   const [saving, setSaving] = useState(false)
 
+  const [canReview, setCanReview] = useState(false)
+
   const load = () => api.get<Review[]>(`/api/products/${product.id}/reviews`).then((r) => setReviews(r.data))
   useEffect(() => { load() }, [product.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!user) return setCanReview(false)
+    api.get<{ can_review: boolean }>(`/api/products/${product.id}/review-eligibility`)
+      .then((r) => setCanReview(r.data.can_review)).catch(() => setCanReview(false))
+  }, [product.id, user])
 
   const mine = reviews.find((r) => r.user.id === user?.id)
   useEffect(() => {
@@ -69,7 +76,12 @@ function ReviewSection({ product, onRated }: { product: Product; onRated: () => 
             </div>
           </div>
 
-          {user ? (
+          {user && !canReview ? (
+            <div className="card flex items-start gap-3 p-6 text-sm text-coffee-500">
+              <BadgeCheck size={20} className="shrink-0 text-coffee-300" />
+              <p>Chỉ khách hàng đã mua và <b>nhận hàng thành công</b> sản phẩm này mới có thể đánh giá – giúp mọi đánh giá đều đáng tin cậy.</p>
+            </div>
+          ) : user ? (
             <form onSubmit={submit} className="card space-y-3 p-6">
               <p className="font-semibold">{mine ? 'Sửa đánh giá của bạn' : 'Viết đánh giá'}</p>
               <Stars value={rating} size={26} onChange={setRating} />

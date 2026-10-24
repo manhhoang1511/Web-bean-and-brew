@@ -259,6 +259,8 @@ def update_order_status(order_id: int, data: OrderStatusUpdate, db: Session = De
     if data.status not in ALLOWED_TRANSITIONS[order.status]:
         raise HTTPException(status.HTTP_400_BAD_REQUEST,
                             f"Không thể chuyển đơn từ '{order.status}' sang '{data.status}'")
+    if data.status == "shipping" and order.payment_method != "cod" and order.payment_status != "paid":
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Đơn trả trước chưa được thanh toán, chưa thể giao hàng")
     order.status = data.status
     if data.status == "cancelled":
         restore_stock(db, order)
