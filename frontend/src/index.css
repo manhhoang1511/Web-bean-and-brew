@@ -23,6 +23,18 @@
   --color-caramel-500: #d08a3c;
   --color-caramel-600: #b5702a;
 
+  /* Bề mặt thẻ / ô nhập (đổi theo theme) */
+  --color-surface: #ffffff;
+
+  /* Vùng LUÔN tối (hero, footer, sidebar admin, lớp phủ) – không đổi theo theme */
+  --color-espresso-800: #3b2a20;
+  --color-espresso-900: #251a14;
+  --color-latte-50: #fdfbf7;
+  --color-latte-100: #ebdccf;
+  --color-latte-200: #d6b9a0;
+  --color-latte-300: #bf9371;
+  --color-latte-400: #a5714c;
+
   --animate-fade-in: fade-in 0.3s ease-out;
   --animate-slide-up: slide-up 0.3s ease-out;
 }
@@ -36,8 +48,37 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* Dark mode: chỉ định nghĩa lại bảng màu, mọi class Tailwind tự đổi theo.
+   Thang coffee được đảo chiều (900 = chữ chính sáng, 50 = nền hover tối). */
+.dark {
+  color-scheme: dark;
+  --color-surface: #211914;
+  --color-cream-50: #15100c;
+  --color-cream-100: #2a211b;
+  --color-cream-200: #3a2e26;
+  --color-coffee-50: #2d241e;
+  --color-coffee-100: #3d3029;
+  --color-coffee-200: #574639;
+  --color-coffee-300: #806c5d;
+  --color-coffee-400: #9f8977;
+  --color-coffee-500: #baa390;
+  --color-coffee-600: #d1bca8;
+  --color-coffee-700: #e3d3c3;
+  --color-coffee-800: #efe4d8;
+  --color-coffee-900: #faf5ef;
+}
+/* Nhãn màu pastel (trạng thái đơn, cảnh báo) dịu lại trên nền tối */
+.dark .bg-amber-50, .dark .bg-emerald-50, .dark .bg-sky-50, .dark .bg-rose-50 { background-color: rgb(255 255 255 / 0.06); }
+.dark .text-amber-700, .dark .text-amber-800 { color: #fbbf24; }
+.dark .hover\:bg-amber-100:hover { background-color: rgb(251 191 36 / 0.12); }
+.dark .text-emerald-700, .dark .text-emerald-800 { color: #34d399; }
+.dark .text-sky-700 { color: #38bdf8; }
+.dark .text-rose-700 { color: #fb7185; }
+.dark .ring-amber-200, .dark .ring-emerald-200, .dark .ring-sky-200, .dark .ring-rose-200 { --tw-ring-color: rgb(255 255 255 / 0.12); }
+.dark .border-emerald-200 { border-color: rgb(52 211 153 / 0.3); }
+
 body {
-  @apply bg-cream-50 text-coffee-900 antialiased;
+  @apply bg-cream-50 text-coffee-900 antialiased transition-colors;
 }
 
 @utility btn {
@@ -46,16 +87,16 @@ body {
 }
 @utility btn-primary { @apply btn bg-coffee-800 text-cream-50 shadow-sm hover:bg-coffee-700; }
 @utility btn-accent { @apply btn bg-caramel-500 text-white shadow-sm hover:bg-caramel-600; }
-@utility btn-outline { @apply btn border border-coffee-200 bg-white text-coffee-800 hover:border-coffee-400 hover:bg-coffee-50; }
+@utility btn-outline { @apply btn border border-coffee-200 bg-surface text-coffee-800 hover:border-coffee-400 hover:bg-coffee-50; }
 @utility btn-ghost { @apply btn text-coffee-700 hover:bg-coffee-50; }
 @utility btn-danger { @apply btn bg-red-600 text-white hover:bg-red-700; }
 
 @utility input {
-  @apply w-full rounded-xl border border-coffee-100 bg-white px-3.5 py-2.5 text-sm text-coffee-900 placeholder:text-coffee-300
+  @apply w-full rounded-xl border border-coffee-100 bg-surface px-3.5 py-2.5 text-sm text-coffee-900 placeholder:text-coffee-300
     outline-none transition focus:border-caramel-500 focus:ring-4 focus:ring-caramel-500/15;
 }
 @utility label { @apply mb-1.5 block text-sm font-medium text-coffee-700; }
-@utility card { @apply rounded-2xl border border-coffee-100/70 bg-white shadow-[0_1px_3px_rgba(59,42,32,0.06)]; }
+@utility card { @apply rounded-2xl border border-coffee-100/70 bg-surface shadow-[0_1px_3px_rgba(59,42,32,0.06)]; }
 @utility chip { @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium; }
 @utility container-page { @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8; }
 

@@ -53,6 +53,15 @@ class ChangePasswordIn(BaseModel):
     new_password: str = Field(min_length=6, max_length=100)
 
 
+class ForgotPasswordIn(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordIn(BaseModel):
+    token: str
+    new_password: str = Field(min_length=6, max_length=100)
+
+
 class TokenOut(BaseModel):
     access_token: str
     token_type: str = "bearer"

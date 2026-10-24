@@ -89,7 +89,7 @@ export function Pagination({ page, pages, onChange }: { page: number; pages: num
           <button
             key={n}
             onClick={() => onChange(n)}
-            className={`${base} ${n === page ? 'bg-coffee-800 text-white' : 'text-coffee-700 hover:bg-coffee-50'}`}
+            className={`${base} ${n === page ? 'bg-coffee-800 text-cream-50' : 'text-coffee-700 hover:bg-coffee-50'}`}
           >
             {n}
           </button>
@@ -106,7 +106,7 @@ export function QuantityInput({ value, max, onChange, size = 'md' }: { value: nu
   const h = size === 'sm' ? 'h-8' : 'h-11'
   const w = size === 'sm' ? 'w-8' : 'w-11'
   return (
-    <div className={`inline-flex ${h} items-center rounded-xl border border-coffee-100 bg-white`}>
+    <div className={`inline-flex ${h} items-center rounded-xl border border-coffee-100 bg-surface`}>
       <button type="button" className={`${w} flex h-full items-center justify-center text-coffee-600 hover:text-coffee-900 disabled:opacity-30`}
         onClick={() => onChange(value - 1)} disabled={value <= 1} aria-label="Giảm">
         <Minus size={14} />
@@ -141,7 +141,7 @@ export function Modal({ open, onClose, title, children, wide }: { open: boolean;
   }, [open, onClose])
   if (!open) return null
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-coffee-900/40 p-4 backdrop-blur-sm animate-fade-in sm:items-center" onMouseDown={onClose}>
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-espresso-900/40 p-4 backdrop-blur-sm animate-fade-in sm:items-center" onMouseDown={onClose}>
       <div className={`card my-8 w-full ${wide ? 'max-w-3xl' : 'max-w-md'} animate-slide-up`} onMouseDown={(e) => e.stopPropagation()} role="dialog" aria-modal>
         <div className="flex items-center justify-between border-b border-coffee-100 px-6 py-4">
           <h3 className="text-lg font-semibold">{title}</h3>

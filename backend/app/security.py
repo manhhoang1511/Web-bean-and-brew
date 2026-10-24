@@ -1,4 +1,5 @@
 """Băm mật khẩu (bcrypt), tạo/giải mã JWT và các dependency phân quyền."""
+import hashlib
 from datetime import datetime, timedelta, timezone
 
 import bcrypt
@@ -28,9 +29,34 @@ def create_access_token(user: User) -> str:
     return jwt.encode(payload, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM)
 
 
+def _pw_fingerprint(user: User) -> str:
+    return hashlib.sha256(user.hashed_password.encode()).hexdigest()[:16]
+
+
+def create_reset_token(user: User) -> str:
+    """Token đặt lại mật khẩu: hết hạn sau 15 phút và chỉ dùng được 1 lần
+    (gắn với dấu vân tay mật khẩu hiện tại -> đổi mật khẩu xong token tự vô hiệu)."""
+    payload = {"sub": str(user.id), "purpose": "reset", "pwf": _pw_fingerprint(user),
+               "exp": datetime.now(timezone.utc) + timedelta(minutes=15)}
+    return jwt.encode(payload, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM)
+
+
+def user_from_reset_token(token: str, db: Session) -> User | None:
+    try:
+        payload = jwt.decode(token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM])
+        user = db.get(User, int(payload["sub"]))
+    except (JWTError, KeyError, ValueError):
+        return None
+    if payload.get("purpose") != "reset" or not user or payload.get("pwf") != _pw_fingerprint(user):
+        return None
+    return user
+
+
 def _user_from_token(token: str, db: Session) -> User | None:
     try:
         payload = jwt.decode(token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM])
+        if payload.get("purpose"):  # token đặt lại mật khẩu không được dùng để đăng nhập
+            return None
         user_id = int(payload["sub"])
     except (JWTError, KeyError, ValueError):
         return None

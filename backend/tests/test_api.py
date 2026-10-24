@@ -234,6 +234,29 @@ def test_wishlist():
     assert client.get("/api/wishlist/ids", headers=h).json() == []
 
 
+def test_forgot_and_reset_password_single_use():
+    register()
+    r = client.post("/api/auth/forgot-password", json={"email": "khach@test.vn"}).json()
+    token = r["demo_reset_url"].split("token=")[1]
+    # Email không tồn tại vẫn trả cùng thông báo, không lộ link
+    assert "demo_reset_url" not in client.post("/api/auth/forgot-password", json={"email": "nobody@test.vn"}).json()
+    # Token đặt lại không dùng thay access token được
+    assert client.get("/api/auth/me", headers={"Authorization": f"Bearer {token}"}).status_code == 401
+    assert client.post("/api/auth/reset-password", json={"token": token, "new_password": "moi123"}).status_code == 204
+    assert client.post("/api/auth/login", json={"email": "khach@test.vn", "password": "moi123"}).status_code == 200
+    # Dùng lại lần 2 -> bị từ chối
+    assert client.post("/api/auth/reset-password", json={"token": token, "new_password": "khac123"}).status_code == 400
+
+
+def test_export_orders_csv():
+    h = register()
+    client.post("/api/orders", json=order_payload(), headers=h)
+    r = client.get("/api/admin/orders/export", headers=admin_headers())
+    assert r.status_code == 200 and r.headers["content-type"].startswith("text/csv")
+    text = r.content.decode("utf-8-sig")
+    assert text.startswith("Mã đơn") and "Arabica Cầu Đất x2" in text and "Đang xử lý" in text
+
+
 def test_chat_offline_fallback(monkeypatch):
     from app.config import settings
     monkeypatch.setattr(settings, "GEMINI_API_KEY", "")

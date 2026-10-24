@@ -203,7 +203,7 @@ export function OrderDetail() {
 
       {order.payment_method === 'qr' && order.payment_status === 'unpaid' && order.status !== 'cancelled' && (
         <div className="card mb-6 flex flex-col items-center gap-5 border-2 border-caramel-500/40 p-6 sm:flex-row animate-slide-up">
-          <img className="h-40 w-40 rounded-xl border border-coffee-100 bg-white p-2"
+          <img className="h-40 w-40 rounded-xl border border-coffee-100 bg-surface p-2"
             src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(`BEANBREW|${order.code}|${order.total}`)}`} alt="Mã QR thanh toán" />
           <div className="flex-1 text-sm">
             <p className="chip mb-2 bg-amber-50 text-amber-700 ring-1 ring-amber-200">⏳ Chờ thanh toán</p>

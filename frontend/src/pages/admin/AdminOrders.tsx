@@ -8,6 +8,8 @@ import { EmptyState, Modal, Pagination, Spinner, StatusBadge } from '../../compo
 import { ORDER_STATUS, PAYMENT_METHOD, PAYMENT_STATUS, formatDate, formatVND } from '../../lib/format'
 import { useDebounce, useDocumentTitle } from '../../lib/hooks'
 import { AdminPageHeader } from './AdminLayout'
+import { useAdminEvents } from '../../store/adminEvents'
+import ExportOrdersButton from './ExportOrdersButton'
 
 // Khớp với ALLOWED_TRANSITIONS ở backend
 const NEXT_ACTIONS: Record<OrderStatus, { to: OrderStatus; label: string; icon: typeof Truck; cls: string }[]> = {
@@ -58,12 +60,13 @@ export default function AdminOrders() {
   const [page, setPage] = useState(1)
   const [viewing, setViewing] = useState<Order | null>(null)
   const dq = useDebounce(q, 300)
+  const version = useAdminEvents((s) => s.version)
 
   useEffect(() => { setPage(1) }, [status, dq])
   useEffect(() => {
     api.get<Page<Order>>('/api/admin/orders', { params: { status: status || undefined, q: dq || undefined, page, page_size: 10 } })
       .then((r) => setData(r.data))
-  }, [status, dq, page])
+  }, [status, dq, page, version])
 
   const onUpdated = (o: Order) => {
     setData((d) => d && { ...d, items: d.items.map((x) => (x.id === o.id ? o : x)) })
@@ -74,14 +77,14 @@ export default function AdminOrders() {
 
   return (
     <>
-      <AdminPageHeader title="Đơn hàng" desc={data ? `${data.total} đơn hàng` : ''} />
+      <AdminPageHeader title="Đơn hàng" desc={data ? `${data.total} đơn hàng` : ''} action={<ExportOrdersButton status={status} />} />
 
       <div className="card mb-4 p-4">
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex flex-wrap gap-1 rounded-xl bg-coffee-50 p-1">
             {tabs.map(([s, label]) => (
               <button key={s} onClick={() => setParams(s ? { status: s } : {})}
-                className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${status === s ? 'bg-white text-coffee-900 shadow-sm' : 'text-coffee-500 hover:text-coffee-800'}`}>
+                className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${status === s ? 'bg-surface text-coffee-900 shadow-sm' : 'text-coffee-500 hover:text-coffee-800'}`}>
                 {label}
               </button>
             ))}

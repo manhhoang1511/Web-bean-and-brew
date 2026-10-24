@@ -34,7 +34,7 @@ function Filters({ categories, params, update }: {
   const curMin = params.get('min_price'), curMax = params.get('max_price')
 
   const item = (selected: boolean) =>
-    `flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm transition ${selected ? 'bg-coffee-800 font-semibold text-white' : 'text-coffee-700 hover:bg-coffee-50'}`
+    `flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm transition ${selected ? 'bg-coffee-800 font-semibold text-cream-50' : 'text-coffee-700 hover:bg-coffee-50'}`
 
   return (
     <div className="space-y-8">
@@ -74,7 +74,7 @@ function Filters({ categories, params, update }: {
         </form>
       </div>
 
-      <label className="flex cursor-pointer items-center justify-between rounded-xl border border-coffee-100 bg-white px-3 py-2.5 text-sm font-medium">
+      <label className="flex cursor-pointer items-center justify-between rounded-xl border border-coffee-100 bg-surface px-3 py-2.5 text-sm font-medium">
         Chỉ hiện còn hàng
         <input type="checkbox" className="h-4 w-4 accent-caramel-500" checked={params.get('in_stock') === 'true'}
           onChange={(e) => update({ in_stock: e.target.checked ? 'true' : null })} />
@@ -166,7 +166,7 @@ export default function Shop() {
       </div>
 
       {showFilters && (
-        <div className="fixed inset-0 z-50 bg-coffee-900/40 lg:hidden" onClick={() => setShowFilters(false)}>
+        <div className="fixed inset-0 z-50 bg-espresso-900/40 lg:hidden" onClick={() => setShowFilters(false)}>
           <div className="ml-auto h-full w-80 max-w-[85vw] overflow-y-auto bg-cream-50 p-5 animate-slide-up" onClick={(e) => e.stopPropagation()}>
             <div className="mb-6 flex items-center justify-between">
               <h2 className="text-lg font-semibold">Bộ lọc</h2>

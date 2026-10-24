@@ -53,15 +53,15 @@ export default function Home() {
       <section className="relative overflow-hidden">
         <div className="absolute inset-0">
           <img src={HERO_IMG} alt="" className="h-full w-full object-cover" />
-          <div className="absolute inset-0 bg-gradient-to-r from-coffee-900/95 via-coffee-900/75 to-coffee-900/20" />
+          <div className="absolute inset-0 bg-gradient-to-r from-espresso-900/95 via-espresso-900/75 to-espresso-900/20" />
         </div>
         <div className="container-page relative py-24 sm:py-32 lg:py-40">
           <div className="max-w-xl animate-slide-up">
             <span className="chip bg-caramel-500/20 px-3 py-1 text-caramel-400 ring-1 ring-caramel-500/40">☕ Rang mới mỗi thứ Hai</span>
-            <h1 className="mt-5 font-display text-4xl font-bold leading-tight text-cream-50 sm:text-6xl">
+            <h1 className="mt-5 font-display text-4xl font-bold leading-tight text-latte-50 sm:text-6xl">
               Đánh thức ngày mới với <span className="text-caramel-400">hương vị thật</span>
             </h1>
-            <p className="mt-5 text-lg leading-relaxed text-coffee-100">
+            <p className="mt-5 text-lg leading-relaxed text-latte-100">
               Cà phê specialty từ Cầu Đất, Buôn Ma Thuột đến Ethiopia – rang thủ công, giao tận nhà trong 48 giờ.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
@@ -72,11 +72,11 @@ export default function Home() {
                 Khám phá cà phê hạt
               </Link>
             </div>
-            <div className="mt-10 flex gap-8 text-cream-50">
+            <div className="mt-10 flex gap-8 text-latte-50">
               {[['24+', 'Sản phẩm'], ['4.8★', 'Đánh giá'], ['10k+', 'Khách hàng']].map(([n, l]) => (
                 <div key={l}>
                   <p className="font-display text-2xl font-bold">{n}</p>
-                  <p className="text-sm text-coffee-200">{l}</p>
+                  <p className="text-sm text-latte-200">{l}</p>
                 </div>
               ))}
             </div>
@@ -130,12 +130,12 @@ export default function Home() {
 
       {/* Câu chuyện */}
       <section className="container-page mt-24">
-        <div className="grid items-center overflow-hidden rounded-3xl bg-coffee-800 lg:grid-cols-2">
+        <div className="grid items-center overflow-hidden rounded-3xl bg-espresso-800 lg:grid-cols-2">
           <img src={STORY_IMG} alt="Rang cà phê" className="h-72 w-full object-cover lg:h-full" />
           <div className="p-8 sm:p-12">
             <p className="text-sm font-semibold uppercase tracking-widest text-caramel-400">Câu chuyện của chúng tôi</p>
-            <h2 className="mt-2 font-display text-3xl font-bold text-cream-50">Từ nông trại đến tách cà phê của bạn</h2>
-            <p className="mt-4 leading-relaxed text-coffee-200">
+            <h2 className="mt-2 font-display text-3xl font-bold text-latte-50">Từ nông trại đến tách cà phê của bạn</h2>
+            <p className="mt-4 leading-relaxed text-latte-200">
               Chúng tôi làm việc trực tiếp với hơn 30 hộ nông dân ở Lâm Đồng và Đắk Lắk, thu mua giá công bằng và rang theo từng mẻ nhỏ
               để giữ trọn hương thơm. Không biết chọn loại nào? Hãy hỏi trợ lý <b className="text-caramel-400">Bean</b> ở góc phải màn hình!
             </p>

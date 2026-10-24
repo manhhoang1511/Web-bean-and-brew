@@ -1,0 +1,25 @@
+# Chạy toàn bộ hệ thống:  docker compose up --build   ->  http://localhost:8080
+services:
+  backend:
+    build: ./backend
+    env_file:
+      - path: ./backend/.env
+        required: false  # không có .env vẫn chạy (chatbot ở chế độ offline)
+    environment:
+      CORS_ORIGINS: http://localhost:8080
+    volumes:
+      - db-data:/data              # CSDL SQLite
+      - uploads:/app/uploads       # ảnh admin tải lên
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  db-data:
+  uploads:

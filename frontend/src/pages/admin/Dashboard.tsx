@@ -7,6 +7,7 @@ import type { OrderStatus, Stats } from '../../api/types'
 import { PageLoader, StatusBadge } from '../../components/ui'
 import { ORDER_STATUS, formatDate, formatShortVND, formatVND } from '../../lib/format'
 import { useDocumentTitle } from '../../lib/hooks'
+import { useAdminEvents } from '../../store/adminEvents'
 import { AdminPageHeader } from './AdminLayout'
 
 const RANGES = [7, 14, 30]
@@ -28,7 +29,7 @@ function RevenueTooltip({ active, payload }: { active?: boolean; payload?: { pay
   if (!active || !payload?.length) return null
   const d = payload[0].payload
   return (
-    <div className="rounded-xl border border-coffee-100 bg-white px-3 py-2 text-xs shadow-lg">
+    <div className="rounded-xl border border-coffee-100 bg-surface px-3 py-2 text-xs shadow-lg">
       <p className="font-semibold text-coffee-800">{formatDate(d.date, false)}</p>
       <p className="mt-1 text-coffee-600">Doanh thu: <b className="text-coffee-900">{formatVND(d.revenue)}</b></p>
       <p className="text-coffee-600">Đơn hàng: <b className="text-coffee-900">{d.orders}</b></p>
@@ -40,10 +41,11 @@ export default function Dashboard() {
   useDocumentTitle('Admin – Tổng quan')
   const [days, setDays] = useState(14)
   const [stats, setStats] = useState<Stats | null>(null)
+  const version = useAdminEvents((s) => s.version) // có đơn mới -> tải lại số liệu
 
   useEffect(() => {
     api.get<Stats>('/api/admin/stats', { params: { days } }).then((r) => setStats(r.data))
-  }, [days])
+  }, [days, version])
 
   if (!stats) return <PageLoader />
 
@@ -71,7 +73,7 @@ export default function Dashboard() {
             <div className="flex rounded-xl bg-coffee-50 p-1">
               {RANGES.map((r) => (
                 <button key={r} onClick={() => setDays(r)}
-                  className={`rounded-lg px-3 py-1 text-xs font-semibold transition ${days === r ? 'bg-white text-coffee-900 shadow-sm' : 'text-coffee-500'}`}>
+                  className={`rounded-lg px-3 py-1 text-xs font-semibold transition ${days === r ? 'bg-surface text-coffee-900 shadow-sm' : 'text-coffee-500'}`}>
                   {r} ngày
                 </button>
               ))}
@@ -86,12 +88,12 @@ export default function Dashboard() {
                     <stop offset="100%" stopColor="#d08a3c" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid vertical={false} stroke="#efe5d3" strokeDasharray="3 3" />
-                <XAxis dataKey="date" tickFormatter={(d: string) => d.slice(8, 10) + '/' + d.slice(5, 7)} tick={{ fontSize: 11, fill: '#a5714c' }} axisLine={false} tickLine={false} minTickGap={16} />
-                <YAxis tickFormatter={formatShortVND} tick={{ fontSize: 11, fill: '#a5714c' }} axisLine={false} tickLine={false} width={48} />
-                <Tooltip content={<RevenueTooltip />} cursor={{ stroke: '#bf9371', strokeDasharray: '4 4' }} />
+                <CartesianGrid vertical={false} stroke="var(--color-cream-200)" strokeDasharray="3 3" />
+                <XAxis dataKey="date" tickFormatter={(d: string) => d.slice(8, 10) + '/' + d.slice(5, 7)} tick={{ fontSize: 11, fill: 'var(--color-coffee-400)' }} axisLine={false} tickLine={false} minTickGap={16} />
+                <YAxis tickFormatter={formatShortVND} tick={{ fontSize: 11, fill: 'var(--color-coffee-400)' }} axisLine={false} tickLine={false} width={48} />
+                <Tooltip content={<RevenueTooltip />} cursor={{ stroke: 'var(--color-coffee-300)', strokeDasharray: '4 4' }} />
                 <Area type="monotone" dataKey="revenue" stroke="#b5702a" strokeWidth={2} fill="url(#rev)" isAnimationActive={false}
-                  activeDot={{ r: 5, stroke: '#fff', strokeWidth: 2, fill: '#b5702a' }} />
+                  activeDot={{ r: 5, stroke: 'var(--color-surface)', strokeWidth: 2, fill: '#b5702a' }} />
               </AreaChart>
             </ResponsiveContainer>
           </div>

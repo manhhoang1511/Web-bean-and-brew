@@ -204,7 +204,7 @@ export default function ProductDetail() {
           <p className="text-sm font-semibold uppercase tracking-widest text-caramel-600">{product.category?.name}</p>
           <div className="mt-2 flex items-start justify-between gap-4">
             <h1 className="font-display text-3xl font-bold leading-tight sm:text-4xl">{product.name}</h1>
-            <HeartButton product={product} className="h-11 w-11 shrink-0 border border-coffee-100 bg-white" />
+            <HeartButton product={product} className="h-11 w-11 shrink-0 border border-coffee-100 bg-surface" />
           </div>
           <a href="#reviews" className="mt-3 flex items-center gap-2 text-sm text-coffee-500">
             <Stars value={product.rating_avg} size={16} />

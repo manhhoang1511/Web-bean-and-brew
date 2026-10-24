@@ -71,7 +71,7 @@ function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: 
   return (
     <button type="button" role="switch" aria-checked={checked} aria-label={label} onClick={() => onChange(!checked)}
       className={`relative h-6 w-11 shrink-0 rounded-full transition ${checked ? 'bg-emerald-500' : 'bg-coffee-200'}`}>
-      <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition ${checked ? 'left-5.5' : 'left-0.5'}`} />
+      <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-surface shadow transition ${checked ? 'left-5.5' : 'left-0.5'}`} />
     </button>
   )
 }
@@ -146,7 +146,7 @@ function ProductForm({ initial, categories, onSaved, onCancel, productId }: {
           <label className="label">Ảnh chính</label>
           <label className="group relative flex aspect-square cursor-pointer items-center justify-center overflow-hidden rounded-xl border-2 border-dashed border-coffee-200 bg-cream-100 hover:border-caramel-500">
             {f.image_url ? <img src={imageUrl(f.image_url)} alt="" className="h-full w-full object-cover" /> : <ImagePlus className="text-coffee-300" size={32} />}
-            <span className="absolute inset-0 flex items-center justify-center bg-coffee-900/50 text-sm font-medium text-white opacity-0 transition group-hover:opacity-100">
+            <span className="absolute inset-0 flex items-center justify-center bg-espresso-900/50 text-sm font-medium text-white opacity-0 transition group-hover:opacity-100">
               {uploading ? <Spinner /> : <><Upload size={16} className="mr-1" /> Tải ảnh</>}
             </span>
             <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])} />

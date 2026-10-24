@@ -181,7 +181,7 @@ export default function Checkout() {
                 <div key={item.key} className="flex items-center gap-3">
                   <div className="relative">
                     <img src={imageUrl(item.product.image_url)} alt="" className="h-14 w-14 rounded-lg object-cover" />
-                    <span className="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-coffee-700 px-1 text-[11px] font-bold text-white">{item.quantity}</span>
+                    <span className="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-coffee-700 px-1 text-[11px] font-bold text-cream-50">{item.quantity}</span>
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="line-clamp-2 text-sm">{item.product.name}</p>

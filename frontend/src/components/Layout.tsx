@@ -9,14 +9,15 @@ import { useWishlist } from '../store/wishlist'
 import { formatVND } from '../lib/format'
 import { useDebounce } from '../lib/hooks'
 import ChatWidget from './ChatWidget'
+import ThemeToggle from './ThemeToggle'
 
 export function Logo({ light }: { light?: boolean }) {
   return (
     <Link to="/" className="flex items-center gap-2.5">
-      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-coffee-800">
+      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-espresso-800">
         <svg viewBox="0 0 64 64" className="h-6 w-6"><ellipse cx="32" cy="32" rx="13" ry="18" fill="#d08a3c" transform="rotate(30 32 32)" /><path d="M26 18c8 6 4 22 12 28" stroke="#3b2a20" strokeWidth="3" fill="none" strokeLinecap="round" /></svg>
       </span>
-      <span className={`font-display text-xl font-bold ${light ? 'text-cream-50' : 'text-coffee-900'}`}>
+      <span className={`font-display text-xl font-bold ${light ? 'text-latte-50' : 'text-coffee-900'}`}>
         Bean <span className="text-caramel-500">&</span> Brew
       </span>
     </Link>
@@ -171,6 +172,7 @@ function Header() {
         </nav>
         <div className="hidden max-w-md flex-1 md:block"><SearchBox /></div>
         <div className="ml-auto flex items-center gap-1 sm:gap-2">
+          <ThemeToggle className="text-coffee-700" />
           {user && (
             <Link to="/wishlist" className="relative hidden rounded-full p-2.5 text-coffee-700 hover:bg-coffee-50 sm:block" aria-label="Yêu thích">
               <Heart size={22} />
@@ -194,7 +196,7 @@ function Header() {
       </div>
 
       {mobileOpen && (
-        <div className="fixed inset-0 z-50 bg-coffee-900/40 md:hidden" onClick={() => setMobileOpen(false)}>
+        <div className="fixed inset-0 z-50 bg-espresso-900/40 md:hidden" onClick={() => setMobileOpen(false)}>
           <div className="h-full w-80 max-w-[85vw] bg-cream-50 p-5 animate-slide-up" onClick={(e) => e.stopPropagation()}>
             <div className="mb-6 flex items-center justify-between">
               <Logo />
@@ -203,7 +205,7 @@ function Header() {
             <SearchBox onDone={() => setMobileOpen(false)} />
             <nav className="mt-6 flex flex-col gap-1" onClick={() => setMobileOpen(false)}>
               {[['/', 'Trang chủ'], ['/shop', 'Cửa hàng'], ['/cart', 'Giỏ hàng'], ...(user ? [['/orders', 'Đơn hàng của tôi'], ['/wishlist', 'Yêu thích'], ['/profile', 'Tài khoản']] : [['/login', 'Đăng nhập'], ['/register', 'Đăng ký']])].map(([to, label]) => (
-                <NavLink key={to} to={to} end className={({ isActive }) => `rounded-xl px-3 py-2.5 font-medium ${isActive ? 'bg-coffee-800 text-white' : 'hover:bg-coffee-50'}`}>
+                <NavLink key={to} to={to} end className={({ isActive }) => `rounded-xl px-3 py-2.5 font-medium ${isActive ? 'bg-coffee-800 text-cream-50' : 'hover:bg-coffee-50'}`}>
                   {label}
                 </NavLink>
               ))}
@@ -218,16 +220,16 @@ function Header() {
 
 function Footer() {
   return (
-    <footer className="mt-20 bg-coffee-900 text-coffee-200">
+    <footer className="mt-20 bg-espresso-900 text-latte-200">
       <div className="container-page grid gap-10 py-14 md:grid-cols-4">
         <div className="md:col-span-2">
           <Logo light />
-          <p className="mt-4 max-w-sm text-sm leading-relaxed text-coffee-300">
+          <p className="mt-4 max-w-sm text-sm leading-relaxed text-latte-300">
             Rang xay thủ công mỗi tuần từ những nông trại tốt nhất Tây Nguyên và thế giới. Giao tận nơi, giữ trọn hương vị.
           </p>
         </div>
         <div>
-          <h4 className="mb-3 font-semibold text-cream-50">Khám phá</h4>
+          <h4 className="mb-3 font-semibold text-latte-50">Khám phá</h4>
           <ul className="space-y-2 text-sm">
             <li><Link to="/shop?category=ca-phe-hat" className="hover:text-caramel-400">Cà phê hạt</Link></li>
             <li><Link to="/shop?category=dung-cu-pha-che" className="hover:text-caramel-400">Dụng cụ pha chế</Link></li>
@@ -235,7 +237,7 @@ function Footer() {
           </ul>
         </div>
         <div>
-          <h4 className="mb-3 font-semibold text-cream-50">Liên hệ</h4>
+          <h4 className="mb-3 font-semibold text-latte-50">Liên hệ</h4>
           <ul className="space-y-2 text-sm">
             <li className="flex items-center gap-2"><MapPin size={15} /> 123 Lê Lợi, Q.1, TP.HCM</li>
             <li className="flex items-center gap-2"><Phone size={15} /> 1900 1234</li>
@@ -243,7 +245,7 @@ function Footer() {
           </ul>
         </div>
       </div>
-      <div className="border-t border-white/10 py-5 text-center text-xs text-coffee-400">
+      <div className="border-t border-white/10 py-5 text-center text-xs text-latte-400">
         © {new Date().getFullYear()} Bean & Brew · Đồ án Vibe Coding – Hệ thống bán hàng
       </div>
     </footer>

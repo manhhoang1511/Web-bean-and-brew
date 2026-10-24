@@ -58,12 +58,12 @@ export default function ProductCard({ product }: { product: Product }) {
           {product.is_featured && <span className="chip bg-coffee-800/90 text-cream-50">Nổi bật</span>}
         </div>
         {!product.in_stock && (
-          <span className="absolute inset-x-0 bottom-0 bg-coffee-900/75 py-1.5 text-center text-xs font-semibold uppercase tracking-wider text-white">
+          <span className="absolute inset-x-0 bottom-0 bg-espresso-900/75 py-1.5 text-center text-xs font-semibold uppercase tracking-wider text-white">
             Hết hàng
           </span>
         )}
       </Link>
-      <HeartButton product={product} className="absolute right-3 top-3 h-9 w-9 bg-white/90 shadow-sm backdrop-blur" />
+      <HeartButton product={product} className="absolute right-3 top-3 h-9 w-9 bg-surface/90 shadow-sm backdrop-blur" />
 
       <div className="flex flex-1 flex-col p-4">
         <p className="text-xs font-medium uppercase tracking-wide text-caramel-600">{product.category?.name}</p>
@@ -85,7 +85,7 @@ export default function ProductCard({ product }: { product: Product }) {
             {off > 0 && <p className="text-xs text-coffee-300 line-through">{formatVND(product.original_price!)}</p>}
           </div>
           <button
-            className="flex h-10 w-10 items-center justify-center rounded-xl bg-coffee-800 text-white transition hover:bg-caramel-500 disabled:cursor-not-allowed disabled:bg-coffee-200"
+            className="flex h-10 w-10 items-center justify-center rounded-xl bg-coffee-800 text-cream-50 transition hover:bg-caramel-500 disabled:cursor-not-allowed disabled:bg-coffee-200"
             disabled={!product.in_stock}
             onClick={() => addToCartWithToast(add, product)}
             aria-label="Thêm vào giỏ"

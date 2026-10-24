@@ -1,12 +1,18 @@
+import asyncio
+import csv
+import io
+import json
 import uuid
 from datetime import date, timedelta
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, Response, UploadFile, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session, joinedload, selectinload
 
 from ..config import settings
 from ..database import get_db
+from ..events import broker
 from ..models import Category, Coupon, Order, OrderItem, Product, User
 from ..schemas import (
     AdminOrderOut, CategoryIn, CategoryOut, CouponOut, CustomerOut, Page, ProductIn, ProductOut,
@@ -27,6 +33,7 @@ ALLOWED_TRANSITIONS = {
     "cancelled": set(),
 }
 REVENUE_STATUSES = ("pending", "shipping", "completed")  # đơn không bị hủy
+STATUS_LABELS = {"pending": "Đang xử lý", "shipping": "Đang giao", "completed": "Đã hoàn thành", "cancelled": "Đã hủy"}
 
 
 # ---------------- Thống kê ----------------
@@ -257,6 +264,61 @@ def admin_orders(
         .offset((page - 1) * page_size).limit(page_size)
     ).all()
     return Page(items=items, total=total, page=page, page_size=page_size, pages=page_count(total, page_size))
+
+
+@router.get("/orders/export")
+def export_orders(
+    status_filter: str | None = Query(None, alias="status"),
+    date_from: date | None = None,
+    date_to: date | None = None,
+    db: Session = Depends(get_db),
+):
+    """Xuất đơn hàng ra CSV (mở được bằng Excel)."""
+    stmt = select(Order).options(selectinload(Order.items), joinedload(Order.user))
+    if status_filter:
+        stmt = stmt.where(Order.status == status_filter)
+    if date_from:
+        stmt = stmt.where(func.date(Order.created_at) >= date_from.isoformat())
+    if date_to:
+        stmt = stmt.where(func.date(Order.created_at) <= date_to.isoformat())
+    orders = db.scalars(stmt.order_by(Order.created_at.desc())).all()
+
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow(["Mã đơn", "Ngày đặt", "Khách hàng", "Email", "SĐT", "Địa chỉ", "Sản phẩm", "Tạm tính",
+                "Giảm giá", "Phí ship", "Tổng tiền", "Mã giảm giá", "Thanh toán", "TT thanh toán", "Trạng thái"])
+    for o in orders:
+        items = "; ".join(f"{i.product_name}{f' ({i.variant_label})' if i.variant_label else ''} x{i.quantity}"
+                          for i in o.items)
+        w.writerow([o.code, o.created_at.strftime("%d/%m/%Y %H:%M"), o.shipping_name, o.user.email, o.shipping_phone,
+                    o.shipping_address, items, o.subtotal, o.discount, o.shipping_fee, o.total, o.coupon_code or "",
+                    o.payment_method, o.payment_status, STATUS_LABELS[o.status]])
+    filename = f"don-hang-{date.today().isoformat()}.csv"
+    # BOM utf-8 để Excel hiển thị đúng tiếng Việt
+    return Response(content="﻿" + buf.getvalue(), media_type="text/csv; charset=utf-8",
+                    headers={"Content-Disposition": f'attachment; filename="{filename}"'})
+
+
+@router.get("/stream")
+async def admin_stream(request: Request):
+    """SSE: đẩy sự kiện đơn hàng mới / đã thanh toán / bị hủy tới trang admin theo thời gian thực."""
+    sub = broker.subscribe()
+    _, queue = sub
+
+    async def gen():
+        try:
+            yield ": connected\n\n"
+            while not await request.is_disconnected():
+                try:
+                    event = await asyncio.wait_for(queue.get(), timeout=15)
+                    yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
+                except asyncio.TimeoutError:
+                    yield ": ping\n\n"  # giữ kết nối không bị proxy cắt
+        finally:
+            broker.unsubscribe(sub)
+
+    return StreamingResponse(gen(), media_type="text/event-stream",
+                             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
 
 @router.patch("/orders/{order_id}/status", response_model=AdminOrderOut)

@@ -9,7 +9,7 @@ import Shop from './pages/Shop'
 import ProductDetail from './pages/ProductDetail'
 import Cart from './pages/Cart'
 import Checkout from './pages/Checkout'
-import { Login, Register } from './pages/Auth'
+import { ForgotPassword, Login, Register, ResetPassword } from './pages/Auth'
 import { MyOrders, OrderDetail } from './pages/Orders'
 import Profile from './pages/Profile'
 import Wishlist from './pages/Wishlist'
@@ -37,7 +37,7 @@ function RequireAuth({ children, adminOnly }: { children: React.ReactNode; admin
 export default function App() {
   return (
     <>
-      <Toaster position="top-center" toastOptions={{ style: { borderRadius: 14, fontSize: 14 }, duration: 2500 }} />
+      <Toaster position="top-center" toastOptions={{ style: { borderRadius: 14, fontSize: 14, background: 'var(--color-surface)', color: 'var(--color-coffee-900)', border: '1px solid var(--color-coffee-100)' }, duration: 2500 }} />
       <Suspense fallback={<PageLoader />}>
         <Routes>
           <Route element={<Layout />}>
@@ -54,6 +54,8 @@ export default function App() {
           </Route>
           <Route path="login" element={<Login />} />
           <Route path="register" element={<Register />} />
+          <Route path="forgot-password" element={<ForgotPassword />} />
+          <Route path="reset-password" element={<ResetPassword />} />
           <Route path="admin" element={<RequireAuth adminOnly><AdminLayout /></RequireAuth>}>
             <Route index element={<Dashboard />} />
             <Route path="products" element={<AdminProducts />} />

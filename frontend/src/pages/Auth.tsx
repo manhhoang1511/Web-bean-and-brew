@@ -16,10 +16,10 @@ function AuthShell({ title, subtitle, children }: { title: string; subtitle: Rea
     <div className="grid min-h-screen lg:grid-cols-2">
       <div className="relative hidden lg:block">
         <img src={SIDE_IMG} alt="" className="absolute inset-0 h-full w-full object-cover" />
-        <div className="absolute inset-0 bg-gradient-to-t from-coffee-900/90 to-coffee-900/30" />
-        <div className="absolute bottom-12 left-12 right-12 text-cream-50">
+        <div className="absolute inset-0 bg-gradient-to-t from-espresso-900/90 to-espresso-900/30" />
+        <div className="absolute bottom-12 left-12 right-12 text-latte-50">
           <p className="font-display text-4xl font-bold leading-tight">“Cuộc sống bắt đầu sau tách cà phê đầu tiên.”</p>
-          <p className="mt-3 text-coffee-200">— Bean & Brew</p>
+          <p className="mt-3 text-latte-200">— Bean & Brew</p>
         </div>
       </div>
       <div className="flex items-center justify-center px-4 py-12">
@@ -82,7 +82,10 @@ export function Login() {
           <input id="email" type="email" className="input" value={email} onChange={(e) => setEmail(e.target.value)} required autoFocus />
         </div>
         <div>
-          <label className="label" htmlFor="password">Mật khẩu</label>
+          <div className="flex items-center justify-between">
+            <label className="label" htmlFor="password">Mật khẩu</label>
+            <Link to="/forgot-password" className="mb-1.5 text-xs font-medium text-caramel-600 hover:underline">Quên mật khẩu?</Link>
+          </div>
           <PasswordInput id="password" value={password} onChange={setPassword} />
         </div>
         <button className="btn-primary w-full py-3" disabled={loading}>{loading && <Spinner className="h-4 w-4" />} Đăng nhập</button>
@@ -90,7 +93,7 @@ export function Login() {
       <div className="mt-8 rounded-xl border border-dashed border-coffee-200 bg-cream-100 p-4 text-xs text-coffee-600">
         <p className="mb-2 font-semibold">Tài khoản demo (bấm để điền):</p>
         {[['admin@beanbrew.vn', 'admin123', 'Quản trị viên'], ['user@beanbrew.vn', 'user123', 'Khách hàng']].map(([e, p, role]) => (
-          <button key={e} type="button" onClick={() => { setEmail(e); setPassword(p) }} className="block w-full rounded-lg px-2 py-1 text-left hover:bg-white">
+          <button key={e} type="button" onClick={() => { setEmail(e); setPassword(p) }} className="block w-full rounded-lg px-2 py-1 text-left hover:bg-surface">
             <b>{role}:</b> {e} / {p}
           </button>
         ))}
@@ -136,6 +139,93 @@ export function Register() {
         </div>
         <p className="text-xs text-coffee-400">Mật khẩu tối thiểu 6 ký tự.</p>
         <button className="btn-primary w-full py-3" disabled={loading}>{loading && <Spinner className="h-4 w-4" />} Đăng ký</button>
+      </form>
+    </AuthShell>
+  )
+}
+
+export function ForgotPassword() {
+  useDocumentTitle('Quên mật khẩu')
+  const [email, setEmail] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [result, setResult] = useState<{ message: string; demo_reset_url?: string } | null>(null)
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    try {
+      const { data } = await api.post('/api/auth/forgot-password', { email })
+      setResult(data)
+    } catch (err) {
+      toast.error(errorMessage(err))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <AuthShell title="Quên mật khẩu?" subtitle={<>Nhớ ra rồi? <Link to="/login" className="font-semibold text-caramel-600 hover:underline">Đăng nhập</Link></>}>
+      {result ? (
+        <div className="space-y-4">
+          <p className="rounded-xl bg-emerald-50 p-4 text-sm text-emerald-800">📧 {result.message}</p>
+          {result.demo_reset_url && (
+            <div className="rounded-xl border border-dashed border-coffee-200 bg-cream-100 p-4 text-sm">
+              <p className="mb-2 text-coffee-600"><b>Chế độ demo</b> – không có máy chủ email nên liên kết hiển thị tại đây:</p>
+              <Link to={result.demo_reset_url} className="btn-accent w-full">Mở liên kết đặt lại mật khẩu</Link>
+            </div>
+          )}
+        </div>
+      ) : (
+        <form className="space-y-4" onSubmit={submit}>
+          <p className="text-sm text-coffee-500">Nhập email đã đăng ký, chúng tôi sẽ gửi liên kết đặt lại mật khẩu (hiệu lực 15 phút).</p>
+          <div>
+            <label className="label" htmlFor="email">Email</label>
+            <input id="email" type="email" className="input" value={email} onChange={(e) => setEmail(e.target.value)} required autoFocus />
+          </div>
+          <button className="btn-primary w-full py-3" disabled={loading}>{loading && <Spinner className="h-4 w-4" />} Gửi liên kết</button>
+        </form>
+      )}
+    </AuthShell>
+  )
+}
+
+export function ResetPassword() {
+  useDocumentTitle('Đặt lại mật khẩu')
+  const [params] = useSearchParams()
+  const navigate = useNavigate()
+  const [password, setPassword] = useState('')
+  const [confirm, setConfirm] = useState('')
+  const [loading, setLoading] = useState(false)
+  const token = params.get('token') ?? ''
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (password !== confirm) return toast.error('Mật khẩu nhập lại không khớp')
+    setLoading(true)
+    try {
+      await api.post('/api/auth/reset-password', { token, new_password: password })
+      toast.success('Đã đặt lại mật khẩu. Hãy đăng nhập bằng mật khẩu mới!')
+      navigate('/login', { replace: true })
+    } catch (err) {
+      toast.error(errorMessage(err))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <AuthShell title="Đặt mật khẩu mới" subtitle="Liên kết chỉ dùng được một lần và hết hạn sau 15 phút.">
+      <form className="space-y-4" onSubmit={submit}>
+        <div>
+          <label className="label" htmlFor="password">Mật khẩu mới</label>
+          <PasswordInput id="password" value={password} onChange={setPassword} />
+        </div>
+        <div>
+          <label className="label" htmlFor="confirm">Nhập lại mật khẩu</label>
+          <PasswordInput id="confirm" value={confirm} onChange={setConfirm} />
+        </div>
+        <button className="btn-primary w-full py-3" disabled={loading || !token}>{loading && <Spinner className="h-4 w-4" />} Lưu mật khẩu mới</button>
+        {!token && <p className="text-sm text-rose-600">Thiếu mã đặt lại – hãy mở đúng liên kết được gửi.</p>}
       </form>
     </AuthShell>
   )

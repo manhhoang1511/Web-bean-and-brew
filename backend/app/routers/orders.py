@@ -7,6 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from ..database import get_db
+from ..events import broker
 from ..models import Order, OrderItem, Product, ProductVariant, User
 from ..schemas import GRIND_OPTIONS, CouponCheckIn, CouponCheckOut, OrderCreate, OrderOut
 from ..security import get_current_user
@@ -142,6 +143,8 @@ def create_order(data: OrderCreate, user: User = Depends(get_current_user), db: 
 
     db.commit()
     db.refresh(order)
+    broker.publish({"type": "new_order", "code": order.code, "total": order.total,
+                    "customer": order.shipping_name, "items": sum(i.quantity for i in order.items)})
     return order
 
 
@@ -178,6 +181,7 @@ def confirm_qr_payment(code: str, user: User = Depends(get_current_user), db: Se
     order.payment_status = "paid"
     db.commit()
     db.refresh(order)
+    broker.publish({"type": "order_paid", "code": order.code, "total": order.total})
     return order
 
 
@@ -190,4 +194,5 @@ def cancel_order(code: str, user: User = Depends(get_current_user), db: Session 
     restore_stock(db, order)
     db.commit()
     db.refresh(order)
+    broker.publish({"type": "order_cancelled", "code": order.code, "total": order.total})
     return order

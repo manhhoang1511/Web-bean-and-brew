@@ -11,6 +11,8 @@ load_dotenv(BASE_DIR / ".env")
 class Settings:
     APP_NAME: str = "Bean & Brew API"
     DATABASE_URL: str = os.getenv("DATABASE_URL", f"sqlite:///{BASE_DIR / 'shop.db'}")
+    # Chế độ demo: trả link đặt lại mật khẩu trong response thay vì gửi email
+    DEMO_MODE: bool = os.getenv("DEMO_MODE", "true").lower() == "true"
 
     # JWT
     JWT_SECRET: str = os.getenv("JWT_SECRET", "dev-secret-change-me")
