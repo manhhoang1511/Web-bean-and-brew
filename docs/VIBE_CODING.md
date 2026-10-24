@@ -39,8 +39,27 @@ Tài liệu ghi lại cách dự án được xây dựng theo phương pháp "V
 | Chatbot offline trả sản phẩm khi khách chỉ nói "xin chào" | Đọc lại logic chấm điểm | Điểm thưởng rating khiến mọi sản phẩm đều > 0 | Tách điểm khớp từ khóa và điểm thưởng; câu chào → hỏi lại nhu cầu |
 | Test đăng ký trùng email trả 422 thay vì 409 | pytest | Dữ liệu test (`full_name="X"`) vi phạm `min_length=2` | Sửa dữ liệu test – API đúng |
 
-## 4. Bài học
+### Vòng 2 – "Nhìn dưới góc độ chuyên gia, còn thiếu gì?"
+
+| Lỗi / điểm yếu | Phát hiện bằng | Nguyên nhân | Sửa |
+|---|---|---|---|
+| Ảnh sản phẩm sai nội dung (máy xay hiện ảnh bánh donut, V60 hiện ảnh cuốn sổ) | Dựng bảng xem trước toàn bộ ảnh rồi xem bằng mắt | Lúc seed chỉ kiểm tra link còn sống (HTTP 200), không kiểm tra nội dung | Thay ảnh đúng; sản phẩm không tìm được ảnh thì đổi sản phẩm cho khớp ảnh |
+| Ai cũng đánh giá được sản phẩm | Tự review logic nghiệp vụ | Chỉ gắn nhãn "Đã mua hàng" chứ không chặn | 403 nếu chưa có đơn hoàn thành; thêm test |
+| Thanh toán QR được coi là đã trả tiền ngay khi đặt | Tự review luồng thanh toán | Mã giả lập quá đơn giản | Đơn QR ở trạng thái chờ thanh toán, phải xác nhận; admin không giao đơn chưa trả tiền |
+| `gemini-3.8-flash` mất khoảng 60 giây mỗi câu | Đo thời gian 5 model bằng script | Model "thinking" nặng | Chuyển sang `gemini-3.5-flash-lite` (khoảng 3 giây, gọi hàm chính xác) |
+| Chatbot offline đọc "5 gói" thành "5g" | pytest `test_chat_add_to_cart_by_voice_is_validated` | Regex `(?!\s*g)` thiếu ranh giới từ nên chặn nhầm chữ "gói" | `(?!\s*(g\|kg\|k\|ml)\b)` |
+| Endpoint mới trả 404 dù code đúng | Gọi thử API, đối chiếu log | Tiến trình uvicorn cũ (mồ côi sau `--reload` trên Windows) vẫn giữ cổng 8000 và phục vụ code cũ | Tìm PID đang giữ cổng, dừng tiến trình đó, khởi động lại |
+| Dòng "Mua thêm … để freeship" bị chia thành 3 cột | Ảnh chụp màn hình | Các mẩu chữ nằm trực tiếp trong flex container nên mỗi mẩu thành một cột | Bọc chữ trong `<span>` |
+| Ảnh chụp "chế độ sáng" lại ra tối | Ảnh chụp màn hình | Theme mặc định theo hệ điều hành (máy đang để tối), hành vi đúng | Ép theme khi chụp để kiểm tra cả hai chế độ |
+
+## 4. Lịch sử Git
+Mỗi giai đoạn là một commit riêng (`git log --oneline`): MVP → sửa ảnh → sửa quy tắc nghiệp vụ → biến thể + wishlist → nâng cấp chatbot → admin/UX → tài liệu. Thông điệp commit ghi rõ *làm gì và vì sao*, có thể dùng khi trình bày quy trình.
+
+## 5. Bài học
 - **Chia nhỏ yêu cầu**: mỗi lần một module (models → router → test → UI) giúp AI giữ đúng ngữ cảnh.
 - **Ràng buộc nghiệp vụ phải nói rõ** (giá do server tính, luồng trạng thái) – AI không tự đoán được ý đồ kinh doanh.
 - **Luôn chạy thật**: build TypeScript thành công ≠ app chạy đúng. 2/5 lỗi trên chỉ lộ ra khi mở trình duyệt.
 - **Đưa bằng chứng khi báo lỗi** (log, traceback, ảnh chụp) thay vì mô tả chung chung.
+- **Đo trước khi chọn**: model AI "mới nhất" chưa chắc phù hợp; đo độ trễ thực tế rồi mới quyết định.
+- **Kiểm tra cả nội dung chứ không chỉ "chạy được"**: link ảnh trả 200 nhưng ảnh vẫn có thể sai.
+- **Không tin tuyệt đối vào AI ngay trong sản phẩm**: hành động do LLM đề xuất (thêm vào giỏ) luôn được server kiểm tra lại.

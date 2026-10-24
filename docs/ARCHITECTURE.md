@@ -33,8 +33,10 @@ Hệ thống theo mô hình **tách biệt Client / Server** (SPA + REST API):
 
 ```
 users ──< orders ──< order_items >── products >── categories
-  │                                     │
-  └──────────< reviews >────────────────┘
+  │                        │            │  └──< product_variants (250g / 500g / 1kg)
+  │                        └────────────┼──────> (order_items.variant_id)
+  ├──────────< reviews >────────────────┤
+  └──────────< wishlists >──────────────┘
 coupons (độc lập, tham chiếu theo code)
 ```
 
@@ -44,7 +46,9 @@ coupons (độc lập, tham chiếu theo code)
 | `categories` | name, slug, icon | |
 | `products` | price, original_price, stock, is_active, is_featured, sold_count, rating_avg, search_text | `search_text` = văn bản không dấu phục vụ tìm kiếm |
 | `orders` | code, status, payment_method, payment_status, subtotal, discount, shipping_fee, total | |
-| `order_items` | product_id (nullable), product_name, unit_price, quantity | **Snapshot** tên/giá lúc mua |
+| `product_variants` | product_id, label, price, original_price, stock | Mỗi phân loại một giá + tồn kho riêng. Sản phẩm có phân loại: `products.price` = giá thấp nhất, `products.stock` = tổng (đồng bộ bằng `sync_from_variants()`) |
+| `order_items` | product_id, variant_id (nullable), product_name, variant_label, unit_price, quantity | **Snapshot** tên/phân loại/giá lúc mua (VD `variant_label = "500g · Xay phin"`) |
+| `wishlists` | user_id, product_id, unique(user_id, product_id) | Danh sách yêu thích theo tài khoản |
 | `reviews` | rating 1–5, comment, unique(user_id, product_id) | Mỗi người 1 đánh giá / sản phẩm |
 | `coupons` | code, discount_percent, max_discount, min_order, is_active | |
 
@@ -75,18 +79,19 @@ coupons (độc lập, tham chiếu theo code)
 
 ### 3.4 Đặt hàng (`POST /api/orders`) – luồng quan trọng nhất
 ```
-Client gửi: items [{product_id, quantity}], địa chỉ, payment_method, coupon_code, card_number
+Client gửi: items [{product_id, variant_id, grind, quantity}], địa chỉ, payment_method, coupon_code, card_number
    │
    ▼
-1. Gộp dòng trùng sản phẩm
+1. Gộp dòng trùng (cùng sản phẩm + phân loại + kiểu xay)
 2. SELECT products ... FOR UPDATE   (khóa dòng trên MySQL/Postgres, tránh 2 người mua món cuối cùng)
-3. Với mỗi sản phẩm: kiểm tra còn bán + đủ tồn kho → lấy GIÁ TỪ DB → tạo OrderItem (snapshot)
+3. Mỗi dòng: sản phẩm còn bán? có phân loại thì bắt buộc variant_id hợp lệ; kiểu xay thuộc danh sách cho phép?
+   cộng dồn nhu cầu theo từng phân loại -> đủ tồn kho? -> lấy GIÁ TỪ DB -> tạo OrderItem (snapshot)
 4. Tính coupon (min_order, % giảm, giảm tối đa) → phí ship (miễn phí nếu ≥ 500k sau giảm)
-5. Thanh toán giả lập: COD → unpaid | QR → paid | Thẻ → kiểm tra Luhn, thẻ 4000…0002 → 402 từ chối
-6. Trừ stock, cộng sold_count
-7. INSERT order + items → COMMIT (1 transaction: lỗi ở bất kỳ bước nào → không có gì được ghi)
+5. Thanh toán giả lập: COD → unpaid | QR → unpaid (chờ xác nhận) | Thẻ → kiểm tra Luhn, 4000…0002 → 402
+6. Trừ stock của phân loại (hoặc sản phẩm), cộng sold_count, đồng bộ lại giá/tồn kho tổng
+7. INSERT order + items → COMMIT (1 transaction) → phát sự kiện "new_order" cho admin
 ```
-Frontend nhận đơn → xóa giỏ → chuyển tới `/orders/{code}?success=1`.
+Frontend nhận đơn → xóa giỏ → chuyển tới `/orders/{code}?success=1`. Đơn QR hiện mã QR + nút "Tôi đã chuyển khoản" (`POST /orders/{code}/pay`, giả lập webhook ngân hàng).
 
 ### 3.5 Trạng thái đơn hàng (state machine)
 ```
@@ -95,43 +100,78 @@ pending (Đang xử lý) ──► shipping (Đang giao) ──► completed (Đ
       └──────► cancelled ◄─────┘
 ```
 - Khách chỉ hủy được khi `pending`. Admin chuyển theo `ALLOWED_TRANSITIONS` (`routers/admin.py`); sai luồng → 400.
+- Đơn trả trước (thẻ/QR) **chưa thanh toán** thì admin không chuyển sang "Đang giao" được.
 - Hủy → `restore_stock` hoàn kho, đơn đã thanh toán → `refunded`. COD hoàn thành → `paid`.
 
 ### 3.6 Thống kê (`GET /api/admin/stats`)
 Dùng hàm tổng hợp SQL: `SUM(total)`, `COUNT`, `GROUP BY DATE(created_at)` (doanh thu theo ngày, điền 0 cho ngày trống), `GROUP BY status`, top sản phẩm theo `SUM(quantity)`. **Doanh thu = tổng các đơn không bị hủy.**
 
-### 3.7 AI Chatbot (`POST /api/chat`)
+### 3.7 AI Chatbot (`POST /api/chat/stream`, `POST /api/chat`)
 ```
-ChatWidget ─► POST /api/chat {messages: 12 tin gần nhất}
+ChatWidget ─► POST /api/chat/stream {messages: 12 tin gần nhất, cart: giỏ hiện tại}  (+ JWT nếu đã đăng nhập)
                 │
                 ▼
-1. Lấy sản phẩm đang bán + coupon đang bật từ DB
-2. build_system_prompt(): vai trò "Bean – nhân viên tư vấn", 6 quy tắc (chỉ giới thiệu sản phẩm có thật,
-   không bán hàng hết, tối đa 3 gợi ý, tiếng Việt…), chính sách ship/thanh toán, danh sách sản phẩm
-3. Gọi Gemini (generateContent, system_instruction) → lỗi thì OpenAI (chat/completions) → lỗi thì offline
-4. find_mentioned(): dò tên sản phẩm trong câu trả lời → trả kèm danh sách sản phẩm
+1. load_context(): sản phẩm đang bán (kèm phân loại), coupon đang bật, tên khách, giỏ hàng
+2. build_system_prompt(): vai trò "Bean", 6 quy tắc (chỉ dùng sản phẩm có thật, không bán hàng hết, tối đa
+   3 gợi ý, gọi add_to_cart khi khách muốn mua, thiếu phân loại thì hỏi lại…), chính sách, danh sách sản phẩm
+3. stream_gemini(): streamGenerateContent?alt=sse, khai báo tool add_to_cart(product_id, quantity, variant, grind)
+   → lỗi thì stream_openai() → lỗi thì offline_reply()
+4. Mỗi mảnh chữ → sự kiện {"type":"delta"} đẩy ngay về trình duyệt
+5. AI gọi tool → resolve_add_to_cart() KIỂM TRA LẠI id, phân loại, kiểu xay, tồn kho
+   → hợp lệ: {"type":"action"} kèm sản phẩm   | không hợp lệ: câu hỏi lại / báo hết hàng
+6. find_mentioned() dò tên sản phẩm trong câu trả lời → {"type":"products"} → {"type":"done"}
                 │
                 ▼
-ChatWidget render markdown + thẻ sản phẩm có nút "Thêm vào giỏ"
+ChatWidget (fetch + ReadableStream): nối chữ dần, nhận "action" thì thêm vào giỏ (Zustand), hiện thẻ sản phẩm
 ```
-- Đây là kỹ thuật **context injection** (một dạng RAG đơn giản): vì catalog nhỏ (~24 sản phẩm) nên đưa toàn bộ vào prompt; catalog lớn thì sẽ lọc trước bằng tìm kiếm rồi mới đưa top-N vào.
+- **Function calling**: thay vì bắt AI viết theo định dạng đặc biệt rồi tự phân tích chữ, ta khai báo hàm (tên, mô tả, kiểu tham số); model tự quyết định khi nào gọi và trả về tham số có cấu trúc. Server **không tin tuyệt đối**, luôn kiểm tra lại trước khi hành động.
+- **Context injection** (một dạng RAG đơn giản): catalog nhỏ (~24 sản phẩm) nên đưa toàn bộ vào prompt; catalog lớn thì lọc trước bằng tìm kiếm rồi mới đưa top-N vào.
+- `POST /api/chat` (trả JSON, đúng yêu cầu đề bài) và `/api/chat/stream` (SSE) dùng **chung một async generator** `chat_events()`, nên logic không bị viết hai lần.
+- Toàn bộ dữ liệu nạp từ DB **trước** khi bắt đầu stream, vì session DB sẽ đóng khi handler trả về StreamingResponse.
 - API key chỉ nằm ở backend (`.env`), **không bao giờ lộ ra trình duyệt**.
-- Chế độ offline: chấm điểm sản phẩm theo từ khóa khớp `search_text`, ý định (đậm/nhẹ/rẻ/ship/mã giảm giá) và ngân sách ("dưới 200k").
+- Chọn model `gemini-3.5-flash-lite` sau khi đo: khoảng 3 giây/câu và gọi hàm chính xác, trong khi `gemini-3.8-flash` mất khoảng 60 giây.
+- Chế độ offline: chấm điểm sản phẩm theo từ khóa khớp `search_text`, ý định (đậm/nhẹ/rẻ/ship/mã giảm giá/thêm vào giỏ) và ngân sách ("dưới 200k").
+
+### 3.8 Thông báo realtime cho admin (`GET /api/admin/stream`)
+```
+Khách đặt hàng ─► create_order() commit ─► broker.publish({"type":"new_order", ...})
+                                               │  (call_soon_threadsafe vì handler sync chạy trong threadpool)
+                                               ▼
+                         asyncio.Queue của từng admin đang mở trang ─► SSE "data: {...}"
+                                               ▼
+AdminLayout: toast + âm báo, badge số đơn chờ; store.version++ → Dashboard & trang Đơn hàng tự tải lại
+```
+- Chọn **SSE thay vì WebSocket**: chỉ cần một chiều server → client, chạy trên HTTP thường, trình duyệt có thể tự kết nối lại; frontend dùng `fetch` để gửi được header `Authorization`.
+- Gửi `: ping` mỗi 15 giây để proxy không cắt kết nối. Nginx phải đặt `proxy_buffering off`.
+- Broker lưu trong bộ nhớ, đủ cho 1 tiến trình; chạy nhiều tiến trình/server thì thay bằng Redis pub/sub.
+
+### 3.9 Quên / đặt lại mật khẩu
+- `POST /api/auth/forgot-password` tạo JWT `{purpose:"reset", pwf: sha256(hashed_password)[:16], exp: 15 phút}`. Luôn trả cùng một thông báo, dù email có tồn tại hay không, để không lộ email nào đã đăng ký.
+- **Dùng 1 lần**: `pwf` là dấu vân tay của mật khẩu hiện tại. Đổi mật khẩu xong thì dấu vân tay khác đi, nên token cũ tự vô hiệu mà không cần lưu gì trong DB.
+- Token có `purpose` nên **không dùng thay access token** được.
+- Chế độ demo (`DEMO_MODE=true`): trả link ngay trong response thay vì gửi email.
 
 ## 4. Frontend
 
 | Thư mục | Nội dung |
 |---|---|
 | `api/client.ts` | axios instance + interceptor JWT + `errorMessage()` đọc lỗi FastAPI |
+| `api/chat.ts`, `api/adminStream.ts` | đọc Server-Sent Events bằng `fetch` + `ReadableStream`, tự kết nối lại |
 | `api/types.ts` | interface TypeScript khớp với Pydantic schema |
-| `store/auth.ts`, `store/cart.ts` | Zustand + `persist` (localStorage) |
-| `components/` | `Layout` (header, search gợi ý, footer), `ProductCard`, `ChatWidget`, `ui.tsx` (Modal, Pagination, Stars…) |
+| `store/auth.ts`, `store/cart.ts` | Zustand + `persist` (localStorage). Mỗi dòng giỏ có `key = sản phẩm + phân loại + kiểu xay` |
+| `store/wishlist.ts` | id sản phẩm yêu thích, cập nhật lạc quan (optimistic) rồi hoàn tác nếu API lỗi |
+| `store/theme.ts`, `store/adminEvents.ts` | theme sáng/tối; sự kiện realtime + `version` để trang admin tự tải lại |
+| `components/` | `Layout` (header, search gợi ý, footer), `ProductCard`, `ChatWidget`, `ThemeToggle`, `ui.tsx` (Modal, Pagination, Stars…) |
 | `pages/`, `pages/admin/` | Mỗi trang tự fetch dữ liệu bằng `useEffect` |
 
 - **Routing**: React Router 7, layout lồng nhau (`Layout` cho khách, `AdminLayout` cho admin).
 - **Code-splitting**: trang admin `lazy()` → khách hàng không phải tải thư viện biểu đồ.
 - **State**: server state fetch trực tiếp; client state (auth, giỏ) ở Zustand — đơn giản hơn Redux, đủ cho quy mô này.
 - **UI**: Tailwind 4 với theme màu cà phê tự định nghĩa (`@theme` trong `index.css`), font Be Vietnam Pro hỗ trợ tiếng Việt.
+- **Dark mode**: Tailwind 4 biên dịch mỗi màu thành biến CSS (`--color-coffee-900`…). Lớp `.dark` trên `<html>` chỉ cần **định nghĩa lại các biến** (đảo thang màu coffee, đổi `--color-surface`), nên mọi component tự đổi theo. Vùng luôn tối (hero, footer, sidebar) dùng token cố định `espresso`/`latte`. Script nhỏ trong `index.html` đặt theme trước khi React chạy để không bị nháy.
+
+## 4b. Triển khai (Docker)
+`docker compose up --build` → nginx (frontend) ở cổng 8080 phục vụ file tĩnh đã build, chuyển `/api` và `/uploads` sang container FastAPI; CSDL SQLite và ảnh upload nằm trong volume nên không mất khi khởi động lại.
 
 ## 5. Câu hỏi vấn đáp thường gặp
 
@@ -145,8 +185,16 @@ ChatWidget render markdown + thẻ sản phẩm có nút "Thêm vào giỏ"
 
 **H: Tại sao lưu mật khẩu bằng bcrypt?** – Hàm băm chậm có salt ngẫu nhiên → chống rainbow table và brute-force; không thể giải ngược.
 
+**H: AI có thể tự ý thêm sản phẩm sai/hết hàng vào giỏ không?** – Không. AI chỉ *đề nghị* gọi `add_to_cart`; server kiểm tra id, phân loại, kiểu xay, tồn kho (và giới hạn số lượng) rồi mới gửi hành động cho frontend. Ngoài ra lúc đặt hàng server còn kiểm tra lại lần nữa.
+
+**H: Vì sao dùng SSE mà không dùng WebSocket?** – Chat streaming và thông báo đơn mới đều là luồng một chiều server → client. SSE chạy trên HTTP thường, đơn giản, qua được proxy; WebSocket hợp hơn khi cần hai chiều liên tục (VD chat giữa người với người).
+
+**H: Token đặt lại mật khẩu dùng 1 lần mà không lưu DB thế nào?** – Token chứa dấu vân tay của mật khẩu đang dùng; đổi mật khẩu xong dấu vân tay đổi, nên token cũ không còn khớp.
+
+**H: Chống đánh giá ảo thế nào?** – `POST /reviews` chỉ chấp nhận khi người dùng có đơn **đã hoàn thành** chứa sản phẩm đó; mỗi người chỉ 1 đánh giá/sản phẩm (unique constraint).
+
 **H: Đổi sang MySQL thế nào?** – `pip install pymysql`, đặt `DATABASE_URL=mysql+pymysql://user:pass@host/db` trong `.env`. ORM không cần sửa code.
 
 **H: Chatbot có bịa sản phẩm không?** – System prompt yêu cầu chỉ dùng sản phẩm trong danh sách, viết đúng tên; thẻ sản phẩm chỉ hiện khi tên khớp với DB nên khách luôn bấm được vào sản phẩm thật.
 
-**H: Làm sao biết code AI sinh ra đúng?** – Bộ `pytest` 10 test kiểm tra các nghiệp vụ cốt lõi (tính tiền, coupon, tồn kho, phân quyền, luồng trạng thái, thanh toán thẻ, chatbot offline) + chạy thử bằng trình duyệt tự động.
+**H: Làm sao biết code AI sinh ra đúng?** – Bộ `pytest` 19 test kiểm tra các nghiệp vụ cốt lõi (tính tiền, coupon, tồn kho theo phân loại, phân quyền, luồng trạng thái, thanh toán thẻ/QR, chống đánh giá ảo, wishlist, đặt lại mật khẩu, xuất CSV, chatbot offline và streaming) + chạy thử bằng trình duyệt tự động + thử chatbot với Gemini thật.
