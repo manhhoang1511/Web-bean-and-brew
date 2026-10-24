@@ -6,8 +6,12 @@ from sqlalchemy.orm import Session, joinedload
 
 from ..config import settings
 from ..database import get_db
-from ..models import Category, Order, OrderItem, Product, Review, User
-from ..schemas import GRIND_OPTIONS, CategoryOut, CategoryWithCount, Page, ProductOut, ReviewIn, ReviewOut
+from ..models import Category, Order, OrderItem, Product, Review, Topping, User
+from ..schemas import (
+    DEFAULT_ICE, DEFAULT_SUGAR, GRIND_OPTIONS, ICE_OPTIONS, MAX_TOPPING_QTY, MAX_TOPPINGS_TOTAL, SUGAR_OPTIONS,
+    ToppingOut,
+)
+from ..schemas import CategoryOut, CategoryWithCount, Page, ProductOut, ReviewIn, ReviewOut
 from ..security import get_current_user
 from ..services import recalc_rating
 from ..utils import page_count, strip_accents
@@ -25,10 +29,18 @@ SORTS = {
 
 
 @router.get("/meta")
-def meta():
+def meta(db: Session = Depends(get_db)):
     """Cấu hình dùng chung cho frontend (tránh hard-code 2 nơi)."""
+    toppings = db.scalars(select(Topping).where(Topping.is_active.is_(True)).order_by(Topping.sort_order, Topping.id)).all()
     return {
         "grind_options": GRIND_OPTIONS,
+        "sugar_options": SUGAR_OPTIONS,
+        "ice_options": ICE_OPTIONS,
+        "default_sugar": DEFAULT_SUGAR,
+        "default_ice": DEFAULT_ICE,
+        "max_topping_qty": MAX_TOPPING_QTY,
+        "max_toppings_total": MAX_TOPPINGS_TOTAL,
+        "toppings": [ToppingOut.model_validate(t).model_dump() for t in toppings],
         "shipping_fee": settings.SHIPPING_FEE,
         "free_shipping_threshold": settings.FREE_SHIPPING_THRESHOLD,
     }

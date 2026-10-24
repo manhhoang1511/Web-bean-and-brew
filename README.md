@@ -10,7 +10,7 @@ Hệ thống thương mại điện tử bán cà phê rang xay, trà và dụng
 | Xác thực | JWT (HS256) + bcrypt, đặt lại mật khẩu bằng token dùng 1 lần |
 | AI | Google Gemini (mặc định `gemini-3.5-flash-lite`) **hoặc** OpenAI – streaming SSE + function calling, có chế độ offline |
 | Realtime | Server-Sent Events: chat streaming, thông báo đơn mới cho admin |
-| Kiểm thử | pytest – 19 test end-to-end cho API |
+| Kiểm thử | pytest – 22 test end-to-end cho API |
 | Triển khai | Docker Compose (nginx + FastAPI) |
 
 ---
@@ -76,24 +76,26 @@ cd backend && .venv\Scripts\python -m pytest -q
 - Trang chủ: hero, danh mục, sản phẩm nổi bật, bán chạy
 - Cửa hàng: **tìm kiếm không dấu**, gợi ý tức thì, lọc danh mục / khoảng giá / còn hàng, 5 kiểu sắp xếp, phân trang; bộ lọc lưu trên URL
 - Chi tiết sản phẩm: gallery ảnh, **chọn khối lượng (250g/500g/1kg) và kiểu xay** (giá và tồn kho đổi theo lựa chọn), đánh giá, sản phẩm liên quan
+- **Đồ uống pha chế**: chọn **size S/M/L, mức đá (nóng → nhiều đá), mức đường (0–100%), topping** (tối đa 3 phần/loại, 5 phần/ly); giá cộng topping cập nhật tức thì, server tính lại khi đặt hàng
 - **Đánh giá chỉ dành cho khách đã nhận hàng**, chống đánh giá ảo
 - **Danh sách yêu thích** (lưu theo tài khoản)
 - Giỏ hàng: thêm/sửa/xóa theo từng phân loại, tự đồng bộ giá & tồn kho, thanh tiến độ freeship
 - Thanh toán: mã giảm giá; COD / thẻ (kiểm tra Luhn) / **QR có bước xác nhận chuyển khoản**
 - Đơn hàng: lọc theo trạng thái, timeline *Đang xử lý → Đang giao → Đã hoàn thành*, hủy đơn, mua lại
 - **Dark mode** (theo hệ điều hành hoặc tự chọn), responsive mobile
+- **Animation**: hero Ken Burns + chữ hiện lần lượt, số liệu đếm tăng, hạt cà phê bay, băng chữ chạy, các khối hiện dần khi cuộn, ảnh sản phẩm **bay vào giỏ hàng**, chuyển trang mượt; tự tắt khi hệ điều hành bật *giảm chuyển động*
 
 ### Quản trị viên (`/admin`)
 - Dashboard: doanh thu, số đơn, khách hàng, giá trị TB/đơn, biểu đồ 7/14/30 ngày, tỉ lệ trạng thái, top bán chạy, cảnh báo sắp hết hàng
 - **Thông báo đơn mới tức thì** (toast + âm báo + badge số đơn chờ), dashboard tự cập nhật
 - Sản phẩm (CRUD): upload ảnh, **trình chỉnh sửa phân loại**, bật/tắt nhanh còn/hết hàng, ẩn/hiện, nổi bật
 - Đơn hàng: lọc, tìm kiếm, cập nhật trạng thái theo đúng luồng, **xuất CSV** theo khoảng ngày (mở được bằng Excel)
-- Danh mục (CRUD), Khách hàng (số đơn, tổng chi tiêu), Mã giảm giá (bật/tắt)
+- Danh mục (CRUD), **Topping (CRUD, tạm ngưng)**, Khách hàng (số đơn, tổng chi tiêu), Mã giảm giá (bật/tắt)
 
 ### Nâng cao – AI Chatbot (`POST /api/chat`, `POST /api/chat/stream`)
 - System prompt chứa vai trò, quy tắc, chính sách, mã giảm giá, **toàn bộ sản phẩm kèm giá từng phân loại**, tên khách và **giỏ hàng hiện tại**
 - **Streaming**: chữ hiện dần như ChatGPT
-- **Function calling** `add_to_cart`: khách nói "lấy 2 gói Ethiopia 250g xay pour-over" thì AI gọi hàm, server **kiểm tra lại** sản phẩm, phân loại và tồn kho, sau đó frontend mới thêm vào giỏ. Thiếu thông tin phân loại thì AI hỏi lại khách.
+- **Function calling** `add_to_cart`: khách nói "lấy 2 gói Ethiopia 250g xay pour-over" hoặc "1 trà sữa size L ít đá 50% đường thêm kem cheese" thì AI gọi hàm, server **kiểm tra lại** sản phẩm, phân loại và tồn kho, sau đó frontend mới thêm vào giỏ. Thiếu thông tin phân loại thì AI hỏi lại khách.
 - Fallback: Gemini → OpenAI → offline, nên khi demo chatbot luôn trả lời được
 
 ## ✨ Điểm nhấn kỹ thuật

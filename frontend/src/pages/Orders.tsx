@@ -162,9 +162,16 @@ export function OrderDetail() {
         const { data } = await api.get<Product>(`/api/products/${item.product_id}`)
         const variant = item.variant_id ? data.variants.find((v) => v.id === item.variant_id) ?? null : null
         if (data.variants.length && !variant) continue // phân loại cũ đã bị xóa
-        const parts = item.variant_label?.split(' · ') ?? []
-        const grind = data.has_grind_option ? parts.find((x) => x !== variant?.label) ?? 'Nguyên hạt' : null
-        if ((variant?.stock ?? data.stock) > 0) { add(data, item.quantity, variant, grind); added++ }
+        // Dùng lại đúng tùy chọn đã lưu trong snapshot đơn hàng (kiểu xay, đá, đường, topping)
+        const o = item.options ?? {}
+        const options = {
+          variant,
+          grind: data.has_grind_option ? o.grind ?? 'Nguyên hạt' : null,
+          sugar: data.is_drink ? o.sugar ?? null : null,
+          ice: data.is_drink ? o.ice ?? null : null,
+          toppings: data.allow_toppings ? o.toppings ?? [] : [],
+        }
+        if ((variant?.stock ?? data.stock) > 0) { add(data, item.quantity, options); added++ }
       } catch { /* sản phẩm đã ngừng bán */ }
     }
     toast[added ? 'success' : 'error'](added ? `Đã thêm ${added} sản phẩm vào giỏ` : 'Các sản phẩm đã hết hàng')

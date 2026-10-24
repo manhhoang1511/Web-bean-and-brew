@@ -1,14 +1,15 @@
 """Tạo dữ liệu mẫu.  Chạy:  python seed.py          (bỏ qua nếu đã có dữ liệu)
                               python seed.py --reset  (xóa sạch và tạo lại)"""
+import json
 import random
 import sys
 from datetime import datetime, timedelta
 
 from app.database import Base, SessionLocal, engine
-from app.models import Category, Coupon, Order, OrderItem, Product, ProductVariant, Review, User
-from app.schemas import GRIND_OPTIONS
+from app.models import Category, Coupon, Order, OrderItem, Product, ProductVariant, Review, Topping, User
+from app.schemas import GRIND_OPTIONS, ICE_OPTIONS, SUGAR_OPTIONS
 from app.security import hash_password
-from app.services import build_search_text, recalc_rating
+from app.services import build_search_text, recalc_rating, resolve_line_options
 from app.utils import slugify
 
 IMG = "https://images.unsplash.com/photo-{}?w=800&q=80&auto=format&fit=crop"
@@ -20,7 +21,32 @@ CATEGORIES = [
     ("Trà & Matcha", "Trà xanh, matcha, trà thảo mộc", "🍵"),
     ("Dụng cụ pha chế", "Phin, French press, máy xay", "⚙️"),
     ("Bánh & Đồ ăn kèm", "Bánh ngọt dùng kèm cà phê", "🥐"),
+    ("Đồ uống pha chế", "Pha tại quán – chọn size, đá, đường, topping", "🥤"),
 ]
+
+# Đồ uống pha chế: (tên, giá size S, ảnh, cho topping, nổi bật, mô tả). Size M +6k, L +12k
+DRINKS = [
+    ("Cà Phê Sữa Đá", 29000, "1578314675249-a6910f80cc4e", True, True,
+     "Robusta Buôn Ma Thuột pha phin truyền thống, hòa quyện sữa đặc – đậm, béo, thơm đúng chất Sài Gòn."),
+    ("Bạc Xỉu", 32000, "1592663527359-cf6642f54cff", True, True,
+     "Nhiều sữa, ít cà phê: ngọt dịu, béo mịn, hợp với người mới uống cà phê."),
+    ("Cappuccino", 45000, "1534778101976-62847782c213", True, False,
+     "Espresso Blend House cùng sữa đánh bọt mịn, phủ bột cacao. Ngon nhất khi uống nóng."),
+    ("Caffè Latte", 45000, "1541167760496-1628856ab772", True, False,
+     "Espresso và nhiều sữa tươi, vị êm, nhẹ nhàng. Thêm sốt caramel để thành Caramel Latte."),
+    ("Matcha Latte", 49000, "1536256263959-770b48d82b0a", True, True,
+     "Matcha Uji Nhật Bản đánh tay cùng sữa tươi – thanh, chát nhẹ, hậu ngọt."),
+    ("Trà Sữa Trân Châu Đường Đen", 42000, "1558857563-b371033873b8", True, True,
+     "Trà đen đậm vị, sữa tươi và trân châu đường đen dẻo thơm nấu mỗi sáng."),
+    ("Trà Đào Cam Sả", 39000, "1563227812-0ea4c22e6cc8", True, False,
+     "Trà ô long ủ lạnh với đào miếng, cam vàng và sả tươi – thanh mát, giải nhiệt."),
+    ("Mocha Đá Xay", 52000, "1627998792088-f8016b438988", True, False,
+     "Espresso, socola Bỉ và đá xay mịn, phủ kem tươi – món tráng miệng dạng uống."),
+    ("Soda Chanh Bạc Hà", 35000, "1556881286-fc6915169721", False, False,
+     "Soda chanh tươi và lá bạc hà, chua nhẹ, sảng khoái – không caffeine."),
+]
+TOPPINGS = [("Trân châu đen", 8000), ("Thạch cà phê", 8000), ("Kem cheese", 12000),
+            ("Shot espresso", 10000), ("Pudding trứng", 10000), ("Sốt caramel", 6000)]
 
 # (tên, danh mục, giá, giá gốc, tồn kho, ảnh, ảnh phụ, xuất xứ, mức rang, khối lượng, nổi bật, mô tả)
 PRODUCTS = [
@@ -66,7 +92,7 @@ PRODUCTS = [
      "Espresso + sữa tươi", None, "300ml", False,
      "Latte pha sẵn từ espresso blend và sữa tươi thanh trùng. Bảo quản lạnh, dùng trong 5 ngày."),
 
-    ("Matcha Uji Nhật Bản", 3, 260000, None, 22, "1515823064-d6e0c04616a7", ["1536256263959-770b48d82b0a"],
+    ("Matcha Uji Nhật Bản", 3, 260000, None, 22, "1515823064-d6e0c04616a7", [],
      "Uji, Kyoto", None, "100g", True,
      "Matcha ceremonial grade, màu xanh ngọc, vị umami, chát nhẹ, hậu ngọt. Pha matcha latte hoặc truyền thống."),
     ("Trà Ô Long Lâm Đồng", 3, 140000, None, 28, "1563822249366-3efb23b8e0c9", ["1544787219-7f47ccb76574"],
@@ -178,7 +204,18 @@ def seed(reset: bool = False) -> None:
                 p.sync_from_variants()
             p.search_text = build_search_text(p)
             products.append(p)
+        for j, (name, price, img, tops, feat, desc) in enumerate(DRINKS):
+            p = Product(name=name, slug=slugify(name), category=cats[6], image_url=IMG.format(img), images="",
+                        price=price, stock=0, weight="Size S / M / L", is_featured=feat, description=desc,
+                        is_drink=True, allow_toppings=tops, created_at=datetime.now() - timedelta(days=5, hours=j),
+                        variants=[ProductVariant(label=sz, price=price + extra, stock=60, sort_order=k)
+                                  for k, (sz, extra) in enumerate([("S", 0), ("M", 6000), ("L", 12000)])])
+            p.sync_from_variants()
+            p.search_text = build_search_text(p)
+            products.append(p)
         db.add_all(products)
+        toppings = [Topping(name=n, price=pr, sort_order=k) for k, (n, pr) in enumerate(TOPPINGS)]
+        db.add_all(toppings)
 
         db.add_all([
             Coupon(code="WELCOME10", description="Giảm 10% cho đơn đầu tiên (tối đa 50.000đ)",
@@ -206,10 +243,15 @@ def seed(reset: bool = False) -> None:
             for p in picks:
                 v = random.choice(p.variants) if p.variants else None
                 grind = random.choice(GRIND_OPTIONS) if p.has_grind_option else None
-                label = " · ".join(x for x in [v.label if v else None, grind] if x) or None
+                sugar = random.choice(SUGAR_OPTIONS) if p.is_drink else None
+                ice = random.choice(ICE_OPTIONS) if p.is_drink else None
+                tops = [(t.id, random.randint(1, 2)) for t in random.sample(toppings, random.randint(0, 2))]                     if p.allow_toppings else []
+                opts = resolve_line_options(p, v, grind, sugar, ice, tops, {t.id: t for t in toppings})
                 items.append(OrderItem(product_id=p.id, variant_id=v.id if v else None, product_name=p.name,
-                                       variant_label=label, product_image=p.image_url,
-                                       unit_price=v.price if v else p.price, quantity=random.randint(1, 3)))
+                                       variant_label=opts.label, product_image=p.image_url,
+                                       options_json=json.dumps(opts.options, ensure_ascii=False) if opts.options else None,
+                                       unit_price=(v.price if v else p.price) + opts.extra_price,
+                                       quantity=random.randint(1, 3)))
             subtotal = sum(i.unit_price * i.quantity for i in items)
             ship = 0 if subtotal >= 500000 else 30000
             method = random.choice(["cod", "card", "qr"])
@@ -237,7 +279,7 @@ def seed(reset: bool = False) -> None:
             recalc_rating(db, p)
 
         db.commit()
-        print(f"✔ Đã tạo {len(products)} sản phẩm, {len(cats)} danh mục, {len(customers)} khách hàng, 70 đơn hàng.")
+        print(f"✔ Đã tạo {len(products)} sản phẩm, {len(cats)} danh mục, {len(toppings)} topping, {len(customers)} khách hàng, 70 đơn hàng.")
         print("  Admin: admin@beanbrew.vn / admin123   |   Khách: user@beanbrew.vn / user123")
     finally:
         db.close()

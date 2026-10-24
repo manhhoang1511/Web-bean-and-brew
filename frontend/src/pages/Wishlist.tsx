@@ -32,7 +32,7 @@ export default function Wishlist() {
             action={<Link to="/shop" className="btn-primary">Khám phá cửa hàng</Link>} />
         ) : (
           <div className="grid grid-cols-2 gap-4 sm:gap-6 lg:grid-cols-4">
-            {shown.map((p) => <ProductCard key={p.id} product={p} />)}
+            {shown.map((p, i) => <ProductCard key={p.id} product={p} index={i} />)}
           </div>
         )}
       </div>

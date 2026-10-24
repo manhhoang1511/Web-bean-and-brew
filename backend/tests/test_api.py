@@ -224,6 +224,69 @@ def test_variant_order_uses_variant_price_and_stock():
     assert [v["stock"] for v in client.get(f"/api/products/{p['id']}").json()["variants"]] == [5, 1]
 
 
+def create_drink():
+    """Tạo 1 đồ uống size S/M + 2 topping qua API admin."""
+    ah = admin_headers()
+    t1 = client.post("/api/admin/toppings", headers=ah, json={"name": "Trân châu đen", "price": 8000}).json()
+    t2 = client.post("/api/admin/toppings", headers=ah, json={"name": "Kem cheese", "price": 12000}).json()
+    d = client.post("/api/admin/products", headers=ah, json={
+        "name": "Bạc Xỉu", "price": 1, "category_id": 1, "is_drink": True, "allow_toppings": True,
+        "variants": [{"label": "S", "price": 30000, "stock": 50}, {"label": "M", "price": 36000, "stock": 50}],
+    }).json()
+    return d, t1, t2
+
+
+def test_drink_options_priced_by_server():
+    d, t1, t2 = create_drink()
+    h = register()
+    size_m = d["variants"][1]["id"]
+    line = {"product_id": d["id"], "variant_id": size_m, "sugar": "50%", "ice": "Ít đá", "quantity": 2,
+            "toppings": [{"topping_id": t1["id"], "quantity": 2}, {"topping_id": t2["id"], "quantity": 1}]}
+    r = client.post("/api/orders", headers=h, json={**order_payload(), "items": [line]})
+    assert r.status_code == 201, r.text
+    item = r.json()["items"][0]
+    # (36.000 + 2×8.000 + 12.000) × 2 ly
+    assert item["unit_price"] == 64000 and item["line_total"] == 128000
+    assert item["variant_label"] == "M · Ít đá · 50% đường · +2 Trân châu đen · +1 Kem cheese"
+    assert item["options"]["toppings"][0] == {"id": t1["id"], "name": "Trân châu đen", "price": 8000, "quantity": 2}
+    # Không chọn đá/đường -> mặc định
+    r = client.post("/api/orders", headers=h, json={**order_payload(), "items": [
+        {"product_id": d["id"], "variant_id": size_m, "quantity": 1}]})
+    assert r.json()["items"][0]["variant_label"] == "M · Vừa đá · 100% đường"
+
+
+def test_drink_options_validation():
+    d, t1, _ = create_drink()
+    h = register()
+    v = d["variants"][0]["id"]
+    bad_lines = [
+        {"product_id": d["id"], "variant_id": v, "sugar": "42%", "quantity": 1},                       # mức đường lạ
+        {"product_id": d["id"], "variant_id": v, "toppings": [{"topping_id": 999, "quantity": 1}], "quantity": 1},
+        {"product_id": d["id"], "variant_id": v, "quantity": 1, "toppings": [                           # quá 5 phần
+            {"topping_id": t1["id"], "quantity": 3}, {"topping_id": t1["id"] + 1, "quantity": 3}]},
+        {"product_id": 1, "sugar": "50%", "quantity": 1},                                              # hạt cà phê không có đường
+        {"product_id": 1, "toppings": [{"topping_id": t1["id"], "quantity": 1}], "quantity": 1},       # không cho topping
+    ]
+    for line in bad_lines:
+        r = client.post("/api/orders", headers=h, json={**order_payload(), "items": [line]})
+        assert r.status_code == 400, (line, r.text)
+    meta = client.get("/api/meta").json()
+    assert "Ít đá" in meta["ice_options"] and len(meta["toppings"]) == 2
+
+
+def test_chat_offline_understands_drink_options(monkeypatch):
+    from app.config import settings
+    monkeypatch.setattr(settings, "GEMINI_API_KEY", "")
+    monkeypatch.setattr(settings, "OPENAI_API_KEY", "")
+    d, t1, _ = create_drink()
+    r = client.post("/api/chat", json={"messages": [
+        {"role": "user", "content": "thêm 2 ly bạc xỉu size M ít đá 50% đường thêm trân châu đen vào giỏ"}]}).json()
+    assert len(r["actions"]) == 1, r
+    a = r["actions"][0]
+    assert a["quantity"] == 2 and a["ice"] == "Ít đá" and a["sugar"] == "50%"
+    assert a["variant_id"] == d["variants"][1]["id"] and a["toppings"] == [{"topping_id": t1["id"], "quantity": 1}]
+
+
 def test_wishlist():
     h = register()
     assert client.post("/api/wishlist/1", headers=h).status_code == 204
@@ -282,7 +345,8 @@ def test_chat_resolve_requires_variant():
     from app.routers.chat import ChatContext, resolve_add_to_cart
     from app.models import ProductVariant
     from datetime import datetime
-    p = Product(id=99, name="Arabica", slug="a", price=1, stock=3, has_grind_option=True, description="",
+    p = Product(id=99, name="Arabica", slug="a", price=1, stock=3, has_grind_option=True, is_drink=False,
+                allow_toppings=False, description="",
                 image_url="", images="", is_featured=False, is_active=True, sold_count=0, rating_avg=0,
                 rating_count=0, created_at=datetime.now(),
                 variants=[ProductVariant(id=1, label="250g", price=100, stock=3)])

@@ -1,4 +1,5 @@
 """Các bảng CSDL (ORM models)."""
+import json
 from datetime import datetime
 
 from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint, func
@@ -61,6 +62,9 @@ class Product(Base):
 
     # Cho phép chọn kiểu xay (nguyên hạt / phin / espresso...) – không đổi giá
     has_grind_option: Mapped[bool] = mapped_column(Boolean, default=False)
+    # Đồ uống pha chế: chọn mức đá + mức đường; allow_toppings: được thêm topping (tính thêm tiền)
+    is_drink: Mapped[bool] = mapped_column(Boolean, default=False)
+    allow_toppings: Mapped[bool] = mapped_column(Boolean, default=False)
 
     category: Mapped[Category | None] = relationship(back_populates="products")
     reviews: Mapped[list["Review"]] = relationship(back_populates="product", cascade="all, delete-orphan")
@@ -99,6 +103,17 @@ class ProductVariant(Base):
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
 
     product: Mapped[Product] = relationship(back_populates="variants")
+
+
+class Topping(Base):
+    """Topping thêm cho đồ uống (trân châu, kem cheese, shot espresso...)."""
+    __tablename__ = "toppings"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(60), unique=True)
+    price: Mapped[int] = mapped_column(Integer)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
 
 
 class Wishlist(Base):
@@ -175,7 +190,9 @@ class OrderItem(Base):
     variant_id: Mapped[int | None] = mapped_column(ForeignKey("product_variants.id", ondelete="SET NULL"))
     # Lưu snapshot tên/giá tại thời điểm mua để lịch sử đơn không đổi khi sản phẩm bị sửa/xóa
     product_name: Mapped[str] = mapped_column(String(200))
-    variant_label: Mapped[str | None] = mapped_column(String(120))  # VD "500g · Xay phin"
+    variant_label: Mapped[str | None] = mapped_column(String(255))  # VD "M · Ít đá · 50% đường · +1 Trân châu"
+    # Snapshot tùy chọn dạng JSON: {"grind", "sugar", "ice", "toppings": [{"id","name","price","quantity"}]}
+    options_json: Mapped[str | None] = mapped_column(Text)
     product_image: Mapped[str] = mapped_column(String(500), default="")
     unit_price: Mapped[int] = mapped_column(Integer)
     quantity: Mapped[int] = mapped_column(Integer)
@@ -185,3 +202,7 @@ class OrderItem(Base):
     @property
     def line_total(self) -> int:
         return self.unit_price * self.quantity
+
+    @property
+    def options(self) -> dict | None:
+        return json.loads(self.options_json) if self.options_json else None

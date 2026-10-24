@@ -13,10 +13,10 @@ from sqlalchemy.orm import Session, joinedload, selectinload
 from ..config import settings
 from ..database import get_db
 from ..events import broker
-from ..models import Category, Coupon, Order, OrderItem, Product, User
+from ..models import Category, Coupon, Order, OrderItem, Product, Topping, User
 from ..schemas import (
     AdminOrderOut, CategoryIn, CategoryOut, CouponOut, CustomerOut, Page, ProductIn, ProductOut,
-    ProductPatch, RevenuePoint, StatsOut, TopProduct, OrderStatusUpdate,
+    ProductPatch, RevenuePoint, StatsOut, TopProduct, OrderStatusUpdate, ToppingIn, ToppingOut,
 )
 from ..security import require_admin
 from ..services import apply_product_data, build_search_text, unique_slug
@@ -355,6 +355,44 @@ def customers(db: Session = Depends(get_db)):
     ).all()
     return [CustomerOut(**CustomerOut.model_validate(u).model_dump(exclude={"order_count", "total_spent"}),
                         order_count=n or 0, total_spent=s or 0) for u, n, s in rows]
+
+
+# ---------------- Topping ----------------
+@router.get("/toppings", response_model=list[ToppingOut])
+def list_toppings(db: Session = Depends(get_db)):
+    return db.scalars(select(Topping).order_by(Topping.sort_order, Topping.id)).all()
+
+
+@router.post("/toppings", response_model=ToppingOut, status_code=status.HTTP_201_CREATED)
+def create_topping(data: ToppingIn, db: Session = Depends(get_db)):
+    if db.scalar(select(Topping.id).where(Topping.name == data.name)):
+        raise HTTPException(status.HTTP_409_CONFLICT, "Topping đã tồn tại")
+    t = Topping(**data.model_dump(), sort_order=(db.scalar(select(func.max(Topping.sort_order))) or 0) + 1)
+    db.add(t)
+    db.commit()
+    db.refresh(t)
+    return t
+
+
+@router.put("/toppings/{topping_id}", response_model=ToppingOut)
+def update_topping(topping_id: int, data: ToppingIn, db: Session = Depends(get_db)):
+    t = db.get(Topping, topping_id)
+    if not t:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Không tìm thấy topping")
+    for field, value in data.model_dump().items():
+        setattr(t, field, value)
+    db.commit()
+    db.refresh(t)
+    return t
+
+
+@router.delete("/toppings/{topping_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_topping(topping_id: int, db: Session = Depends(get_db)):
+    """Đơn hàng cũ vẫn giữ tên/giá topping trong snapshot options_json."""
+    t = db.get(Topping, topping_id)
+    if t:
+        db.delete(t)
+        db.commit()
 
 
 # ---------------- Mã giảm giá ----------------

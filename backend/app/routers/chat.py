@@ -17,16 +17,20 @@ from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 
 import httpx
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
 
 from ..config import settings
 from ..database import get_db
-from ..models import Coupon, Product, User
-from ..schemas import GRIND_OPTIONS, ChatAction, ChatIn, ChatMessage, ChatOut, ProductOut
+from ..models import Coupon, Product, Topping, User
+from ..schemas import (
+    DEFAULT_ICE, DEFAULT_SUGAR, GRIND_OPTIONS, ICE_OPTIONS, MAX_TOPPING_QTY, MAX_TOPPINGS_TOTAL, SUGAR_OPTIONS,
+    ChatAction, ChatIn, ChatMessage, ChatOut, ProductOut, ToppingChoice,
+)
 from ..security import get_optional_user
+from ..services import resolve_line_options
 from ..utils import format_vnd, strip_accents
 
 router = APIRouter(prefix="/api", tags=["AI Chat"])
@@ -42,6 +46,17 @@ ADD_TO_CART_TOOL = {
             "quantity": {"type": "integer", "description": "số lượng, mặc định 1"},
             "variant": {"type": "string", "description": "tên phân loại, VD '500g' (bắt buộc nếu sản phẩm có phân loại)"},
             "grind": {"type": "string", "enum": GRIND_OPTIONS, "description": "kiểu xay (chỉ với sản phẩm cho chọn kiểu xay)"},
+            "sugar": {"type": "string", "enum": SUGAR_OPTIONS, "description": "mức đường (chỉ đồ uống pha chế)"},
+            "ice": {"type": "string", "enum": ICE_OPTIONS, "description": "mức đá hoặc Nóng (chỉ đồ uống pha chế)"},
+            "toppings": {
+                "type": "array",
+                "description": "topping thêm (chỉ đồ uống cho phép topping)",
+                "items": {
+                    "type": "object",
+                    "properties": {"name": {"type": "string"}, "quantity": {"type": "integer"}},
+                    "required": ["name"],
+                },
+            },
         },
         "required": ["product_id", "quantity"],
     },
@@ -56,9 +71,15 @@ class ChatContext:
     user_name: str | None
     cart_text: str
     by_id: dict[int, Product] = field(init=False)
+    toppings: list[Topping] = field(default_factory=list)
 
     def __post_init__(self):
         self.by_id = {p.id: p for p in self.products}
+
+    def find_topping(self, name: str) -> Topping | None:
+        key = strip_accents(name)
+        return next((t for t in self.toppings if strip_accents(t.name) == key), None) or \
+            next((t for t in self.toppings if key and (key in strip_accents(t.name) or strip_accents(t.name) in key)), None)
 
 
 def _price_text(p: Product) -> str:
@@ -73,11 +94,14 @@ def build_system_prompt(ctx: ChatContext) -> str:
         stock = f"còn {p.stock}" if p.stock > 0 else "HẾT HÀNG"
         extra = ", ".join(x for x in [p.origin, p.roast_level] if x)
         grind = " | có chọn kiểu xay" if p.has_grind_option else ""
+        if p.is_drink:
+            grind += " | ĐỒ UỐNG: chọn size, đá, đường" + (", topping" if p.allow_toppings else "")
         lines.append(
             f"- id={p.id} | {p.name} | {_price_text(p)} | {p.category.name if p.category else 'Khác'} | {stock}"
             f"{grind} | {extra} | ⭐{p.rating_avg} | {p.description[:150]}"
         )
     coupon_lines = [f"- {c.code}: {c.description}" for c in ctx.coupons] or ["- (không có)"]
+    topping_text = ", ".join(f"{t.name} +{format_vnd(t.price)}" for t in ctx.toppings) or "(không có)"
     greeting = f"Khách đang trò chuyện tên là {ctx.user_name}. Hãy xưng hô thân thiện." if ctx.user_name \
         else "Khách chưa đăng nhập."
     return f"""Bạn là "Bean", nhân viên tư vấn bán hàng thân thiện của cửa hàng cà phê Bean & Brew.
@@ -90,7 +114,8 @@ QUY TẮC:
 3. Trả lời bằng tiếng Việt, ngắn gọn (tối đa ~120 từ), có thể dùng gạch đầu dòng. Giá ghi dạng 150.000đ.
 4. Gợi ý tối đa 3 sản phẩm mỗi lần và giải thích ngắn gọn vì sao phù hợp.
 5. Khi khách yêu cầu thêm/mua sản phẩm: gọi tool add_to_cart (mỗi sản phẩm một lần gọi). Nếu sản phẩm có phân loại
-   mà khách chưa nói rõ, hãy hỏi lại khách muốn phân loại nào thay vì tự chọn.
+   (khối lượng / size) mà khách chưa nói rõ, hãy hỏi lại khách muốn phân loại nào thay vì tự chọn.
+   Với đồ uống: truyền mức đá, đường, topping nếu khách có nói; không nói thì để trống (mặc định {DEFAULT_ICE}, {DEFAULT_SUGAR} đường).
 6. Câu hỏi ngoài phạm vi cửa hàng: lịch sự từ chối và hướng về sản phẩm.
 
 {greeting}
@@ -101,6 +126,10 @@ CHÍNH SÁCH:
 - Thanh toán: COD, thẻ, chuyển khoản QR. Hủy đơn được khi đơn còn "Đang xử lý".
 - Mã giảm giá đang có:
 {chr(10).join(coupon_lines)}
+
+TÙY CHỌN ĐỒ UỐNG PHA CHẾ:
+- Đá: {", ".join(ICE_OPTIONS)} | Đường: {", ".join(SUGAR_OPTIONS)}
+- Topping (giá mỗi phần, tối đa {MAX_TOPPING_QTY} phần/loại, {MAX_TOPPINGS_TOTAL} phần/ly): {topping_text}
 
 DANH SÁCH SẢN PHẨM (id | tên | giá theo phân loại | danh mục | tồn kho | kiểu xay | thông tin | đánh giá | mô tả):
 {chr(10).join(lines)}
@@ -132,9 +161,39 @@ def resolve_add_to_cart(ctx: ChatContext, args: dict) -> tuple[ChatAction | None
     grind = args.get("grind") if product.has_grind_option else None
     if product.has_grind_option and grind not in GRIND_OPTIONS:
         grind = "Nguyên hạt"
+    sugar = args.get("sugar") if product.is_drink and args.get("sugar") in SUGAR_OPTIONS else None
+    ice = args.get("ice") if product.is_drink and args.get("ice") in ICE_OPTIONS else None
+
+    tops, unknown, capped = [], [], []
+    for t in (args.get("toppings") or []) if product.allow_toppings else []:
+        name = str(t.get("name", "") if isinstance(t, dict) else t)
+        try:
+            wanted = int(t.get("quantity") or 1) if isinstance(t, dict) else 1
+        except (TypeError, ValueError):
+            wanted = 1
+        tq = max(1, min(wanted, MAX_TOPPING_QTY))
+        if top := ctx.find_topping(name):
+            tops.append((top.id, tq))
+            if wanted > MAX_TOPPING_QTY:
+                capped.append(top.name)
+        else:
+            unknown.append(name)
+    if unknown:
+        have = ", ".join(t.name for t in ctx.toppings)
+        return None, f"Bean chưa có topping **{', '.join(unknown)}** 😅 Hiện có: {have}. Bạn chọn loại khác nhé?"
+    try:
+        opts = resolve_line_options(product, variant, grind, sugar, ice, tops, {t.id: t for t in ctx.toppings})
+    except HTTPException as exc:  # VD quá số topping cho phép
+        return None, str(exc.detail)
+
+    o = opts.options or {}
     action = ChatAction(product=ProductOut.model_validate(product), variant_id=variant.id if variant else None,
-                        grind=grind, quantity=qty)
-    desc = f"{qty} × **{label}**" + (f" · {grind}" if grind else "")
+                        grind=o.get("grind"), sugar=o.get("sugar"), ice=o.get("ice"),
+                        toppings=[ToppingChoice(topping_id=t["id"], quantity=t["quantity"]) for t in o.get("toppings", [])],
+                        quantity=qty)
+    desc = f"{qty} × **{product.name}**" + (f" ({opts.label})" if opts.label else "")
+    if capped:  # báo cho khách biết đã bị giới hạn thay vì âm thầm sửa
+        desc += f" – {', '.join(capped)} tối đa {MAX_TOPPING_QTY} phần/ly nên Bean để {MAX_TOPPING_QTY} phần nhé"
     return action, desc
 
 
@@ -171,11 +230,13 @@ async def stream_gemini(system: str, messages: list[ChatMessage]) -> AsyncIterat
 
 
 def _to_gemini_schema(schema: dict) -> dict:
-    """Gemini dùng kiểu viết hoa (OBJECT, STRING...)."""
-    out = {k: v for k, v in schema.items() if k not in ("type", "properties")}
+    """Gemini dùng kiểu viết hoa (OBJECT, STRING, ARRAY...)."""
+    out = {k: v for k, v in schema.items() if k not in ("type", "properties", "items")}
     out["type"] = schema["type"].upper()
     if "properties" in schema:
         out["properties"] = {k: _to_gemini_schema(v) for k, v in schema["properties"].items()}
+    if "items" in schema:
+        out["items"] = _to_gemini_schema(schema["items"])
     return out
 
 
@@ -211,7 +272,7 @@ async def stream_openai(system: str, messages: list[ChatMessage]) -> AsyncIterat
 # ---------------- Bộ tư vấn offline ----------------
 PRICE_RE = re.compile(r"(duoi|toi da|khong qua|max|<)\s*(\d+)\s*(k|nghin|ngan|000)?")
 ADD_RE = re.compile(r"\b(them|bo|cho|lay|mua|dat)\b.*\b(gio|goi|hop|cai|chai|phan|ly|bo)\b|\bvao gio\b")
-QTY_RE = re.compile(r"\b(\d{1,2})\b(?!\s*(g|kg|k|ml)\b)")  # "5 gói" là số lượng, "5g" thì không
+QTY_RE = re.compile(r"\b(\d{1,2})\b(?!\s*(%|(g|kg|k|ml)\b))")  # "5 gói" là số lượng; "5g", "50%" thì không
 INTENT_WORDS = {
     "ship": ["ship", "giao hang", "van chuyen", "phi giao"],
     "coupon": ["ma giam", "khuyen mai", "voucher", "coupon", "giam gia", "sale"],
@@ -272,7 +333,10 @@ def offline_reply(ctx: ChatContext, question: str) -> tuple[str, list[Product], 
         qty = int(q.group(1)) if (q := QTY_RE.search(text)) else 1
         variant = next((v.label for v in product.variants if strip_accents(v.label) in text.split()), None)
         grind = next((g for g in GRIND_OPTIONS if strip_accents(g) in text), None)
-        return "", [], [{"product_id": product.id, "quantity": qty, "variant": variant, "grind": grind}]
+        args = {"product_id": product.id, "quantity": qty, "variant": variant, "grind": grind}
+        if product.is_drink:
+            args |= _parse_drink_options(ctx, text, question)
+        return "", [], [args]
 
     picks = [p for _, _, p in scored[:3]]
     if has("greet") and not keywords and not has_criteria:
@@ -287,6 +351,31 @@ def offline_reply(ctx: ChatContext, question: str) -> tuple[str, list[Product], 
     body = "\n".join(f"- **{p.name}** – {format_vnd(p.price)}: {short(p.description)}" for p in picks)
     return (f"{intro}Mình gợi ý cho bạn{budget}:\n{body}\n\nBạn muốn mình thêm món nào vào giỏ không? "
             "_(Chế độ tư vấn offline)_"), picks, []
+
+
+SUGAR_WORDS = {"khong duong": "0%", "it duong": "30%", "nhieu duong": "100%"}
+ICE_WORDS = {"khong da": "Không đá", "it da": "Ít đá", "nhieu da": "Nhiều đá", "vua da": "Vừa đá", "nong": "Nóng"}
+
+
+def _parse_drink_options(ctx: ChatContext, text: str, raw: str) -> dict:
+    """'ít đá 50% đường thêm 2 trân châu' -> {"ice": "Ít đá", "sugar": "50%", "toppings": [...]}
+    text: câu đã bỏ dấu (mất ký tự %), raw: câu gốc"""
+    out: dict = {}
+    m = re.search(r"(\d{1,3})\s*%", raw) or re.search(r"(\d{1,3})\s*(?:phan tram\s*)?duong", text)
+    if m and f"{m.group(1)}%" in SUGAR_OPTIONS:
+        out["sugar"] = f"{m.group(1)}%"
+    elif sugar := next((v for k, v in SUGAR_WORDS.items() if k in text), None):
+        out["sugar"] = sugar
+    if ice := next((v for k, v in ICE_WORDS.items() if f" {k} " in text), None):
+        out["ice"] = ice
+    tops = []
+    for t in ctx.toppings:
+        name = strip_accents(t.name)
+        if m := re.search(rf"(?:(\d)\s*(?:phan\s*)?)?{re.escape(name)}", text):
+            tops.append({"name": t.name, "quantity": int(m.group(1) or 1)})
+    if tops:
+        out["toppings"] = tops
+    return out
 
 
 def find_mentioned(products: list[Product], reply: str) -> list[Product]:
@@ -367,7 +456,8 @@ def load_context(db: Session, data: ChatIn, user: User | None) -> ChatContext:
         + "".join(f" · {x}" for x in [line.variant_label, line.grind] if x)
         for line in data.cart if line.product_id in by_id
     ]
-    ctx = ChatContext(products=list(products), coupons=list(coupons),
+    toppings = db.scalars(select(Topping).where(Topping.is_active.is_(True)).order_by(Topping.sort_order)).all()
+    ctx = ChatContext(products=list(products), coupons=list(coupons), toppings=list(toppings),
                       user_name=user.full_name if user else None, cart_text="; ".join(cart) or "(trống)")
     # Nạp sẵn mọi thuộc tính cần dùng để generator không chạm DB sau khi session đóng
     for p in ctx.products:

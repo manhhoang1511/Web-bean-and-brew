@@ -52,6 +52,15 @@ Tài liệu ghi lại cách dự án được xây dựng theo phương pháp "V
 | Dòng "Mua thêm … để freeship" bị chia thành 3 cột | Ảnh chụp màn hình | Các mẩu chữ nằm trực tiếp trong flex container nên mỗi mẩu thành một cột | Bọc chữ trong `<span>` |
 | Ảnh chụp "chế độ sáng" lại ra tối | Ảnh chụp màn hình | Theme mặc định theo hệ điều hành (máy đang để tối), hành vi đúng | Ép theme khi chụp để kiểm tra cả hai chế độ |
 
+### Vòng 3 – "Giao diện hơi chán + đồ uống thiếu tùy chọn đá/đường/topping"
+
+| Lỗi / điểm yếu | Phát hiện bằng | Nguyên nhân | Sửa |
+|---|---|---|---|
+| Danh mục "pha sẵn" chỉ có đồ đóng chai, không chọn được đá/đường | Phản hồi người dùng | Thiếu mô hình đồ uống pha chế | Thêm `toppings`, cờ `is_drink`/`allow_toppings`, `options_json`; một hàm kiểm tra dùng chung |
+| Chatbot offline đọc "50% đường" thành mặc định 100% | pytest | Hàm bỏ dấu tiếng Việt cũng xóa ký tự `%` | Đọc `%` từ câu gốc, hỗ trợ thêm "50 đường" |
+| Khách xin 4 shot espresso, server âm thầm giảm còn 3 | Thử Gemini thật | Kiểm tra đúng nhưng không thông báo | Chatbot nói rõ đã giới hạn 3 phần/loại |
+| Trang đồ uống tràn ngang trên điện thoại | Chụp màn hình 390px + đo `scrollWidth` | Phần tử con của CSS grid mặc định `min-width: auto` | `min-w-0` cho cột và nút mức đá |
+
 ## 4. Lịch sử Git
 Mỗi giai đoạn là một commit riêng (`git log --oneline`): MVP → sửa ảnh → sửa quy tắc nghiệp vụ → biến thể + wishlist → nâng cấp chatbot → admin/UX → tài liệu. Thông điệp commit ghi rõ *làm gì và vì sao*, có thể dùng khi trình bày quy trình.
 

@@ -22,6 +22,7 @@ const AdminOrders = lazy(() => import('./pages/admin/AdminOrders'))
 const AdminCategories = lazy(() => import('./pages/admin/AdminMisc').then((m) => ({ default: m.AdminCategories })))
 const AdminCustomers = lazy(() => import('./pages/admin/AdminMisc').then((m) => ({ default: m.AdminCustomers })))
 const AdminCoupons = lazy(() => import('./pages/admin/AdminMisc').then((m) => ({ default: m.AdminCoupons })))
+const AdminToppings = lazy(() => import('./pages/admin/AdminToppings'))
 
 /** Chặn trang cần đăng nhập; adminOnly chặn thêm theo role */
 function RequireAuth({ children, adminOnly }: { children: React.ReactNode; adminOnly?: boolean }) {
@@ -63,6 +64,7 @@ export default function App() {
             <Route path="categories" element={<AdminCategories />} />
             <Route path="customers" element={<AdminCustomers />} />
             <Route path="coupons" element={<AdminCoupons />} />
+            <Route path="toppings" element={<AdminToppings />} />
           </Route>
         </Routes>
       </Suspense>

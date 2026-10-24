@@ -3,9 +3,11 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { BadgeCheck, ChevronRight, MessageSquare, ShieldCheck, ShoppingBag, Truck, Zap } from 'lucide-react'
 import { api, errorMessage, imageUrl } from '../api/client'
-import type { Product, Review } from '../api/types'
+import type { CartTopping, Product, Review } from '../api/types'
 import ProductCard, { HeartButton, addToCartWithToast, defaultVariant } from '../components/ProductCard'
-import { useMeta } from '../lib/meta'
+import DrinkOptions from '../components/DrinkOptions'
+import { DEFAULT_META, useMeta } from '../lib/meta'
+import { type LineOptions, optionsLabel, toppingsTotal } from '../store/cart'
 import { EmptyState, PageLoader, QuantityInput, Spinner, Stars } from '../components/ui'
 import { useAuth } from '../store/auth'
 import { useCart } from '../store/cart'
@@ -142,7 +144,11 @@ export default function ProductDetail() {
   const [qty, setQty] = useState(1)
   const [variantId, setVariantId] = useState<number | null>(null)
   const [grind, setGrind] = useState<string | null>(null)
-  const { grind_options, free_shipping_threshold } = useMeta()
+  const [sugar, setSugar] = useState(DEFAULT_META.default_sugar)
+  const [ice, setIce] = useState(DEFAULT_META.default_ice)
+  const [toppingQty, setToppingQty] = useState<Record<number, number>>({})
+  const meta = useMeta()
+  const { grind_options, free_shipping_threshold } = meta
   useDocumentTitle(product?.name ?? '')
 
   const load = () =>
@@ -153,6 +159,7 @@ export default function ProductDetail() {
     load().then((p) => {
       setVariantId(p ? defaultVariant(p)?.id ?? null : null)
       setGrind(p?.has_grind_option ? 'Nguyên hạt' : null)
+      setSugar(DEFAULT_META.default_sugar); setIce(DEFAULT_META.default_ice); setToppingQty({})
     })
     api.get<Product[]>(`/api/products/${slug}/related`).then((r) => setRelated(r.data)).catch(() => {})
   }, [slug]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -162,7 +169,17 @@ export default function ProductDetail() {
 
   // Giá & tồn kho theo biến thể đang chọn
   const variant = product.variants.find((v) => v.id === variantId) ?? null
-  const price = variant?.price ?? product.price
+  // Đồ uống: topping đã chọn (kèm tên + giá) để tính tiền và hiển thị
+  const toppings: CartTopping[] = meta.toppings
+    .filter((t) => toppingQty[t.id])
+    .map((t) => ({ id: t.id, name: t.name, price: t.price, quantity: toppingQty[t.id] }))
+  const options: LineOptions = {
+    variant, grind,
+    sugar: product.is_drink ? sugar : null,
+    ice: product.is_drink ? ice : null,
+    toppings: product.allow_toppings ? toppings : [],
+  }
+  const price = (variant?.price ?? product.price) + toppingsTotal(options.toppings)
   const originalPrice = variant ? variant.original_price : product.original_price
   const stock = variant?.stock ?? product.stock
   const off = discountPercent(price, originalPrice)
@@ -170,7 +187,7 @@ export default function ProductDetail() {
     `rounded-xl border-2 px-4 py-2 text-sm font-medium transition ${selected ? 'border-caramel-500 bg-caramel-500/10 text-coffee-900'
       : disabled ? 'cursor-not-allowed border-dashed border-coffee-100 text-coffee-300 line-through' : 'border-coffee-100 hover:border-coffee-300'}`
   const specs = [
-    ['Xuất xứ', product.origin], ['Mức rang', product.roast_level], ['Khối lượng', product.weight], ['Danh mục', product.category?.name],
+    ['Xuất xứ', product.origin], ['Mức rang', product.roast_level], [product.is_drink ? 'Kích cỡ' : 'Khối lượng', product.weight], ['Danh mục', product.category?.name],
   ].filter(([, v]) => v)
 
   return (
@@ -182,7 +199,7 @@ export default function ProductDetail() {
         <span className="truncate text-coffee-700">{product.name}</span>
       </nav>
 
-      <div className="grid gap-10 lg:grid-cols-2">
+      <div className="grid gap-10 lg:grid-cols-2 [&>*]:min-w-0">
         <div>
           <div className="card relative aspect-square overflow-hidden">
             <img src={imageUrl(product.gallery[activeImg] ?? product.image_url)} alt={product.name} className="h-full w-full object-cover animate-fade-in" key={activeImg} />
@@ -215,7 +232,7 @@ export default function ProductDetail() {
           </a>
 
           <div className="mt-6 flex items-end gap-3">
-            <p className="text-4xl font-bold text-coffee-900">{formatVND(price)}</p>
+            <p key={price} className="text-4xl font-bold text-coffee-900 animate-pop">{formatVND(price)}</p>
             {off > 0 && <p className="pb-1 text-lg text-coffee-300 line-through">{formatVND(originalPrice!)}</p>}
           </div>
 
@@ -235,7 +252,7 @@ export default function ProductDetail() {
           <div className="mt-8 space-y-5 border-t border-coffee-100 pt-6">
             {product.variants.length > 0 && (
               <div>
-                <p className="mb-2 text-sm font-semibold">Khối lượng</p>
+                <p className="mb-2 text-sm font-semibold">{product.is_drink ? 'Size' : 'Khối lượng'}</p>
                 <div className="flex flex-wrap gap-2">
                   {product.variants.map((v) => (
                     <button key={v.id} className={chip(v.id === variantId, v.stock === 0)} disabled={v.stock === 0}
@@ -245,6 +262,10 @@ export default function ProductDetail() {
                   ))}
                 </div>
               </div>
+            )}
+            {product.is_drink && (
+              <DrinkOptions meta={meta} sugar={sugar} ice={ice} toppingQty={toppingQty} allowToppings={product.allow_toppings}
+                onSugar={setSugar} onIce={setIce} onTopping={(id, q) => setToppingQty((m) => ({ ...m, [id]: q }))} />
             )}
             {product.has_grind_option && (
               <div>
@@ -263,13 +284,22 @@ export default function ProductDetail() {
                 </span>
               ) : <span className="font-semibold text-rose-600">● Tạm hết hàng</span>}
             </p>
+            {stock > 0 && product.is_drink && (
+              <div className="flex items-center justify-between gap-3 rounded-xl bg-espresso-800 px-4 py-3 text-sm text-latte-100 animate-fade-in">
+                <span className="min-w-0 truncate">☕ {optionsLabel(options)}</span>
+                <span className="shrink-0 font-semibold text-latte-50">
+                  {qty > 1 && <span className="mr-1 font-normal text-latte-300">{formatVND(price)} × {qty} =</span>}
+                  <span key={price * qty} className="inline-block animate-pop">{formatVND(price * qty)}</span>
+                </span>
+              </div>
+            )}
             {stock > 0 && (
               <div className="flex flex-wrap gap-3">
                 <QuantityInput value={Math.min(qty, stock)} max={stock} onChange={setQty} />
-                <button className="btn-outline h-11 flex-1 px-6" onClick={() => addToCartWithToast(add, product, qty, variant, grind)}>
+                <button className="btn-outline h-11 flex-1 px-6" onClick={(e) => addToCartWithToast(add, product, qty, options, e.currentTarget)}>
                   <ShoppingBag size={18} /> Thêm vào giỏ
                 </button>
-                <button className="btn-accent h-11 flex-1 px-6" onClick={() => { add(product, qty, variant, grind); navigate('/cart') }}>
+                <button className="btn-accent shine h-11 flex-1 px-6" onClick={() => { add(product, qty, options); navigate('/cart') }}>
                   <Zap size={18} /> Mua ngay
                 </button>
               </div>
@@ -289,7 +319,7 @@ export default function ProductDetail() {
         <section className="mt-16">
           <h2 className="mb-6 font-display text-2xl font-bold">Có thể bạn cũng thích</h2>
           <div className="grid grid-cols-2 gap-4 sm:gap-6 lg:grid-cols-4">
-            {related.map((p) => <ProductCard key={p.id} product={p} />)}
+            {related.map((p, i) => <ProductCard key={p.id} product={p} index={i} />)}
           </div>
         </section>
       )}

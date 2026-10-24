@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
-import { BarChart3, Boxes, FolderTree, LogOut, Menu, Moon, Receipt, Store, Sun, TicketPercent, Users, X } from 'lucide-react'
+import { BarChart3, Boxes, CupSoda, FolderTree, LogOut, Menu, Moon, Receipt, Store, Sun, TicketPercent, Users, X } from 'lucide-react'
 import { api } from '../../api/client'
 import { connectAdminStream, playChime } from '../../api/adminStream'
 import type { Order, Page } from '../../api/types'
@@ -15,6 +15,7 @@ const NAV = [
   { to: '/admin/orders', label: 'Đơn hàng', icon: Receipt },
   { to: '/admin/products', label: 'Sản phẩm', icon: Boxes },
   { to: '/admin/categories', label: 'Danh mục', icon: FolderTree },
+  { to: '/admin/toppings', label: 'Topping', icon: CupSoda },
   { to: '/admin/customers', label: 'Khách hàng', icon: Users },
   { to: '/admin/coupons', label: 'Mã giảm giá', icon: TicketPercent },
 ]

@@ -15,13 +15,13 @@ type FormState = {
   name: string; description: string; price: string; original_price: string; stock: string
   image_url: string; images: string; origin: string; roast_level: string; weight: string
   is_featured: boolean; is_active: boolean; category_id: string
-  has_grind_option: boolean; variants: VariantRow[]
+  has_grind_option: boolean; is_drink: boolean; allow_toppings: boolean; variants: VariantRow[]
 }
 
 const EMPTY: FormState = {
   name: '', description: '', price: '', original_price: '', stock: '0', image_url: '', images: '',
   origin: '', roast_level: '', weight: '', is_featured: false, is_active: true, category_id: '',
-  has_grind_option: false, variants: [],
+  has_grind_option: false, is_drink: false, allow_toppings: false, variants: [],
 }
 
 const toForm = (p: Product): FormState => ({
@@ -29,6 +29,7 @@ const toForm = (p: Product): FormState => ({
   stock: String(p.stock), image_url: p.image_url, images: p.gallery.slice(1).join('\n'), origin: p.origin ?? '',
   roast_level: p.roast_level ?? '', weight: p.weight ?? '', is_featured: p.is_featured, is_active: p.is_active,
   category_id: p.category ? String(p.category.id) : '', has_grind_option: p.has_grind_option,
+  is_drink: p.is_drink, allow_toppings: p.allow_toppings,
   variants: p.variants.map((v) => ({ id: v.id, label: v.label, price: String(v.price), original_price: v.original_price ? String(v.original_price) : '', stock: String(v.stock) })),
 })
 
@@ -193,6 +194,8 @@ function ProductForm({ initial, categories, onSaved, onCancel, productId }: {
         <label className="flex items-center gap-3 text-sm font-medium"><Toggle checked={f.is_active} onChange={(v) => set('is_active', v)} /> Hiển thị trên cửa hàng</label>
         <label className="flex items-center gap-3 text-sm font-medium"><Toggle checked={f.is_featured} onChange={(v) => set('is_featured', v)} /> Sản phẩm nổi bật</label>
         <label className="flex items-center gap-3 text-sm font-medium"><Toggle checked={f.has_grind_option} onChange={(v) => set('has_grind_option', v)} /> Cho chọn kiểu xay</label>
+        <label className="flex items-center gap-3 text-sm font-medium"><Toggle checked={f.is_drink} onChange={(v) => set('is_drink', v)} /> Đồ uống pha chế (chọn đá, đường)</label>
+        <label className="flex items-center gap-3 text-sm font-medium"><Toggle checked={f.allow_toppings} onChange={(v) => set('allow_toppings', v)} /> Cho thêm topping</label>
       </div>
       <div className="flex justify-end gap-2 border-t border-coffee-100 pt-5">
         <button type="button" className="btn-outline" onClick={onCancel}>Hủy</button>

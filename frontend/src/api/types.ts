@@ -27,8 +27,25 @@ export interface Variant {
   stock: number
 }
 
+export interface Topping {
+  id: number
+  name: string
+  price: number
+  is_active: boolean
+}
+
+/** Topping đã chọn cho 1 ly (snapshot tên + giá để hiển thị) */
+export interface CartTopping {
+  id: number
+  name: string
+  price: number
+  quantity: number
+}
+
 export interface Product {
   has_grind_option: boolean
+  is_drink: boolean
+  allow_toppings: boolean
   variants: Variant[]
   id: number
   name: string
@@ -77,6 +94,7 @@ export interface OrderItem {
   product_id: number | null
   variant_id: number | null
   variant_label: string | null
+  options: { grind?: string; sugar?: string; ice?: string; toppings?: CartTopping[] } | null
   product_name: string
   product_image: string
   unit_price: number
@@ -140,6 +158,9 @@ export interface ChatAction {
   product: Product
   variant_id: number | null
   grind: string | null
+  sugar: string | null
+  ice: string | null
+  toppings: { topping_id: number; quantity: number }[]
   quantity: number
 }
 

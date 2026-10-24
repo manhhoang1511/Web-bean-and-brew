@@ -173,5 +173,5 @@ export function ConfirmDialog({ open, title, message, confirmText = 'Xác nhận
 }
 
 export function Skeleton({ className = '' }: { className?: string }) {
-  return <div className={`animate-pulse rounded-xl bg-coffee-100/60 ${className}`} />
+  return <div className={`skeleton-shimmer rounded-xl ${className}`} />
 }

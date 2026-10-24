@@ -89,6 +89,30 @@ class CategoryWithCount(CategoryOut):
 
 # ---------- Product ----------
 GRIND_OPTIONS = ["Nguyên hạt", "Xay phin", "Xay pour-over", "Xay espresso", "Xay French press"]
+# Tùy chọn đồ uống pha chế (phần tử đầu tiên KHÔNG phải mặc định – xem DEFAULT_*)
+SUGAR_OPTIONS = ["0%", "30%", "50%", "70%", "100%"]
+ICE_OPTIONS = ["Nóng", "Không đá", "Ít đá", "Vừa đá", "Nhiều đá"]
+DEFAULT_SUGAR, DEFAULT_ICE = "100%", "Vừa đá"
+MAX_TOPPING_QTY = 3      # tối đa mỗi loại topping
+MAX_TOPPINGS_TOTAL = 5   # tối đa tổng số phần topping cho 1 ly
+
+
+class ToppingIn(BaseModel):
+    name: str = Field(min_length=2, max_length=60)
+    price: int = Field(ge=0)
+    is_active: bool = True
+
+
+class ToppingOut(ORMModel):
+    id: int
+    name: str
+    price: int
+    is_active: bool
+
+
+class ToppingChoice(BaseModel):
+    topping_id: int
+    quantity: int = Field(ge=1, le=MAX_TOPPING_QTY)
 
 
 class VariantIn(BaseModel):
@@ -122,6 +146,8 @@ class ProductIn(BaseModel):
     is_active: bool = True
     category_id: int | None = None
     has_grind_option: bool = False
+    is_drink: bool = False
+    allow_toppings: bool = False
     variants: list[VariantIn] = Field(default=[], max_length=10)
 
 
@@ -154,6 +180,8 @@ class ProductOut(ORMModel):
     rating_count: int
     category: CategoryOut | None
     has_grind_option: bool
+    is_drink: bool
+    allow_toppings: bool
     variants: list[VariantOut]
     created_at: datetime
 
@@ -209,6 +237,9 @@ class CartItemIn(BaseModel):
     product_id: int
     variant_id: int | None = None
     grind: str | None = None
+    sugar: str | None = None
+    ice: str | None = None
+    toppings: list[ToppingChoice] = Field(default=[], max_length=10)
     quantity: int = Field(ge=1, le=99)
 
 
@@ -229,6 +260,7 @@ class OrderItemOut(ORMModel):
     variant_id: int | None
     product_name: str
     variant_label: str | None
+    options: dict | None
     product_image: str
     unit_price: int
     quantity: int
@@ -329,6 +361,9 @@ class ChatAction(BaseModel):
     product: ProductOut
     variant_id: int | None = None
     grind: str | None = None
+    sugar: str | None = None
+    ice: str | None = None
+    toppings: list[ToppingChoice] = []
     quantity: int
 
 

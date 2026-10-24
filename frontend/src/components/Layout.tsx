@@ -183,7 +183,7 @@ function Header() {
               )}
             </Link>
           )}
-          <Link to="/cart" className="relative rounded-full p-2.5 text-coffee-700 hover:bg-coffee-50" aria-label="Giỏ hàng">
+          <Link to="/cart" className="relative rounded-full p-2.5 text-coffee-700 hover:bg-coffee-50" aria-label="Giỏ hàng" data-cart-icon>
             <ShoppingBag size={22} />
             {count > 0 && (
               <span className="absolute right-0.5 top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-caramel-500 px-1 text-[11px] font-bold text-white ring-2 ring-cream-50">
@@ -265,7 +265,8 @@ export default function Layout() {
     <div className="flex min-h-screen flex-col">
       <Header />
       <main className="flex-1">
-        <Outlet />
+        {/* key đổi theo đường dẫn -> mỗi lần chuyển trang chạy lại hiệu ứng xuất hiện */}
+        <div key={pathname} className="animate-page"><Outlet /></div>
       </main>
       <Footer />
       <ChatWidget />

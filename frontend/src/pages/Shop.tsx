@@ -152,7 +152,7 @@ export default function Shop() {
           ) : data && data.items.length > 0 ? (
             <>
               <div className={`grid grid-cols-2 gap-4 transition sm:gap-6 xl:grid-cols-3 ${loading ? 'opacity-50' : ''}`}>
-                {data.items.map((p) => <ProductCard key={p.id} product={p} />)}
+                {data.items.map((p, i) => <ProductCard key={p.id} product={p} index={i} />)}
               </div>
               <div className="mt-10">
                 <Pagination page={data.page} pages={data.pages} onChange={(p) => { update({ page: String(p) }); window.scrollTo({ top: 0, behavior: 'smooth' }) }} />

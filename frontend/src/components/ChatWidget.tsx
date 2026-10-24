@@ -5,8 +5,10 @@ import { Bot, CheckCircle2, MessageCircle, RotateCcw, Send, ShoppingBag, X } fro
 import { errorMessage, imageUrl } from '../api/client'
 import { streamChat } from '../api/chat'
 import type { ChatMessage, Product } from '../api/types'
-import { useCart } from '../store/cart'
+import { lineLabel, useCart } from '../store/cart'
 import { formatVND } from '../lib/format'
+import { useMeta } from '../lib/meta'
+import { flyToCart } from '../lib/animations'
 import { addToCartWithToast } from './ProductCard'
 
 const GREETING: ChatMessage = {
@@ -53,6 +55,7 @@ export default function ChatWidget() {
   const [loading, setLoading] = useState(false)
   const [provider, setProvider] = useState<string>('')
   const addToCart = useCart((s) => s.add)
+  const meta = useMeta()
   const endRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -70,8 +73,9 @@ export default function ChatWidget() {
     setLoading(true)
     // Bỏ lời chào mặc định và danh sách sản phẩm trước khi gửi lên server
     const history = next.filter((m) => m.content !== GREETING.content).map(({ role, content }) => ({ role, content }))
+    // Gửi giỏ hiện tại (kèm toàn bộ tùy chọn dạng chữ) để chatbot tư vấn theo ngữ cảnh
     const cart = useCart.getState().items.map((i) => ({
-      product_id: i.product.id, variant_label: i.variant?.label ?? null, grind: i.grind, quantity: i.quantity,
+      product_id: i.product.id, variant_label: lineLabel(i) || null, grind: null, quantity: i.quantity,
     }))
     // Cập nhật tin nhắn trợ lý cuối cùng khi có dữ liệu stream mới
     let reply: ChatMessage = { role: 'assistant', content: '', products: [], added: [] }
@@ -81,9 +85,15 @@ export default function ChatWidget() {
         if (ev.type === 'delta') {
           reply = { ...reply, content: reply.content + ev.text }
         } else if (ev.type === 'action') {
-          const { product, variant_id, grind, quantity } = ev.action
+          const { product, variant_id, grind, sugar, ice, toppings, quantity } = ev.action
           const variant = product.variants.find((v) => v.id === variant_id) ?? null
-          addToCart(product, quantity, variant, grind)
+          // Ghép tên + giá topping từ /api/meta để giỏ hàng hiển thị và tính tiền
+          const chosen = toppings.flatMap((c) => {
+            const t = meta.toppings.find((x) => x.id === c.topping_id)
+            return t ? [{ id: t.id, name: t.name, price: t.price, quantity: c.quantity }] : []
+          })
+          addToCart(product, quantity, { variant, grind, sugar, ice, toppings: chosen })
+          flyToCart(document.querySelector<HTMLElement>('button.fixed.bottom-5'), product.image_url)
           reply = { ...reply, added: [...(reply.added ?? []), ev.action] }
         } else if (ev.type === 'products') {
           reply = { ...reply, products: ev.products }
@@ -108,12 +118,13 @@ export default function ChatWidget() {
         className="fixed bottom-5 right-5 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-espresso-800 text-white shadow-xl shadow-coffee-900/30 transition hover:scale-105 hover:bg-caramel-500"
         aria-label="Mở trợ lý tư vấn"
       >
-        {open ? <X size={24} /> : <MessageCircle size={24} />}
+        {!open && <span className="absolute inset-0 rounded-full bg-caramel-500 animate-ping-slow" aria-hidden />}
+        <span key={String(open)} className="relative animate-pop">{open ? <X size={24} /> : <MessageCircle size={24} />}</span>
         {!open && <span className="absolute right-0 top-0 h-3.5 w-3.5 rounded-full bg-caramel-500 ring-2 ring-white" />}
       </button>
 
       {open && (
-        <div className="fixed bottom-24 right-4 z-40 flex h-[min(600px,calc(100vh-8rem))] w-[calc(100vw-2rem)] max-w-sm flex-col overflow-hidden rounded-3xl border border-coffee-100 bg-cream-50 shadow-2xl shadow-coffee-900/20 animate-slide-up sm:right-5">
+        <div className="fixed bottom-24 right-4 z-40 flex h-[min(600px,calc(100vh-8rem))] w-[calc(100vw-2rem)] max-w-sm flex-col overflow-hidden rounded-3xl border border-coffee-100 bg-cream-50 shadow-2xl shadow-coffee-900/20 origin-bottom-right animate-[pop_.35s_cubic-bezier(.3,1.4,.5,1)] sm:right-5">
           <div className="flex items-center gap-3 bg-espresso-800 px-4 py-3.5 text-white">
             <span className="flex h-10 w-10 items-center justify-center rounded-full bg-caramel-500"><Bot size={22} /></span>
             <div className="flex-1">

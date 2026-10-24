@@ -49,6 +49,8 @@ coupons (độc lập, tham chiếu theo code)
 | `product_variants` | product_id, label, price, original_price, stock | Mỗi phân loại một giá + tồn kho riêng. Sản phẩm có phân loại: `products.price` = giá thấp nhất, `products.stock` = tổng (đồng bộ bằng `sync_from_variants()`) |
 | `order_items` | product_id, variant_id (nullable), product_name, variant_label, unit_price, quantity | **Snapshot** tên/phân loại/giá lúc mua (VD `variant_label = "500g · Xay phin"`) |
 | `wishlists` | user_id, product_id, unique(user_id, product_id) | Danh sách yêu thích theo tài khoản |
+| `toppings` | name, price, is_active | Topping cho đồ uống; `products.is_drink` bật chọn đá/đường, `products.allow_toppings` bật topping |
+| `order_items.options_json` | `{grind, sugar, ice, toppings:[{id,name,price,quantity}]}` | Snapshot tùy chọn → "Mua lại" đúng y như cũ, xóa topping không làm sai đơn cũ |
 | `reviews` | rating 1–5, comment, unique(user_id, product_id) | Mỗi người 1 đánh giá / sản phẩm |
 | `coupons` | code, discount_percent, max_discount, min_order, is_active | |
 
@@ -92,6 +94,12 @@ Client gửi: items [{product_id, variant_id, grind, quantity}], địa chỉ, p
 7. INSERT order + items → COMMIT (1 transaction) → phát sự kiện "new_order" cho admin
 ```
 Frontend nhận đơn → xóa giỏ → chuyển tới `/orders/{code}?success=1`. Đơn QR hiện mã QR + nút "Tôi đã chuyển khoản" (`POST /orders/{code}/pay`, giả lập webhook ngân hàng).
+
+### 3.4b Tùy chọn đồ uống (size / đá / đường / topping)
+- Mức đá/đường cố định trong `schemas.py` (`ICE_OPTIONS`, `SUGAR_OPTIONS`), topping lưu DB; frontend lấy tất cả qua `GET /api/meta` → không hard-code 2 nơi.
+- `services.resolve_line_options()` là **một hàm duy nhất** kiểm tra mọi tùy chọn (đúng loại sản phẩm, mức hợp lệ, topping đang bán, ≤3 phần/loại, ≤5 phần/ly) và tính tiền topping; dùng chung cho **đặt hàng** và **chatbot**.
+- Giá 1 ly = giá size + Σ(giá topping × số phần). Client chỉ gửi id + số lượng.
+- Giỏ hàng: mỗi dòng có `key` = sản phẩm + size + đá + đường + topping → 2 ly khác đường là 2 dòng riêng.
 
 ### 3.5 Trạng thái đơn hàng (state machine)
 ```
@@ -169,6 +177,8 @@ AdminLayout: toast + âm báo, badge số đơn chờ; store.version++ → Dashb
 - **State**: server state fetch trực tiếp; client state (auth, giỏ) ở Zustand — đơn giản hơn Redux, đủ cho quy mô này.
 - **UI**: Tailwind 4 với theme màu cà phê tự định nghĩa (`@theme` trong `index.css`), font Be Vietnam Pro hỗ trợ tiếng Việt.
 - **Dark mode**: Tailwind 4 biên dịch mỗi màu thành biến CSS (`--color-coffee-900`…). Lớp `.dark` trên `<html>` chỉ cần **định nghĩa lại các biến** (đảo thang màu coffee, đổi `--color-surface`), nên mọi component tự đổi theo. Vùng luôn tối (hero, footer, sidebar) dùng token cố định `espresso`/`latte`. Script nhỏ trong `index.html` đặt theme trước khi React chạy để không bị nháy.
+
+- **Animation**: không dùng thư viện. `useInView` (IntersectionObserver) + component `<Reveal>` cho hiệu ứng hiện dần khi cuộn (có `delay` để chạy lần lượt); `useCountUp` (requestAnimationFrame) cho số liệu; `flyToCart` (Web Animations API) nhân bản ảnh bay theo đường cong tới `[data-cart-icon]`; keyframes trong `index.css`. Tôn trọng `prefers-reduced-motion`. Lưu ý: `will-change: transform` tạo containing block làm lệch phần tử `position: fixed`, nên bỏ sau khi chạy xong.
 
 ## 4b. Triển khai (Docker)
 `docker compose up --build` → nginx (frontend) ở cổng 8080 phục vụ file tĩnh đã build, chuyển `/api` và `/uploads` sang container FastAPI; CSDL SQLite và ảnh upload nằm trong volume nên không mất khi khởi động lại.

@@ -6,7 +6,7 @@ import { api, errorMessage, imageUrl } from '../api/client'
 import type { Order, PaymentMethod } from '../api/types'
 import { Spinner } from '../components/ui'
 import { useAuth } from '../store/auth'
-import { cartSubtotal, lineLabel, unitPrice, useCart } from '../store/cart'
+import { cartSubtotal, lineLabel, toOrderLine, unitPrice, useCart } from '../store/cart'
 import { FREE_SHIPPING_THRESHOLD, SHIPPING_FEE, formatVND } from '../lib/format'
 import { useDocumentTitle } from '../lib/hooks'
 
@@ -83,7 +83,7 @@ export default function Checkout() {
         payment_method: method,
         coupon_code: coupon?.code,
         card_number: method === 'card' ? card.number : undefined,
-        items: items.map((i) => ({ product_id: i.product.id, variant_id: i.variant?.id ?? null, grind: i.grind, quantity: i.quantity })),
+        items: items.map(toOrderLine),
       })
       clear()
       navigate(`/orders/${data.code}?success=1`, { replace: true })
