@@ -129,6 +129,123 @@ PRODUCTS = [
      "Mousse dâu tây chua ngọt mát lạnh trong hũ thủy tinh, cân bằng vị đậm của cà phê."),
 ]
 
+# ---- 30 sản phẩm bổ sung (ảnh CC0 lưu tại backend/static/products) ----
+# 10 cà phê hạt + 20 sản phẩm chia cho 6 danh mục còn lại (4 + 4 + 3 + 3 + 3 + 3)
+LOCAL = "/static/products/{}.jpg"
+
+MORE_PRODUCTS = [
+    # Cà phê hạt (10)
+    ("Arabica Sơn La Natural", 0, 210000, None, 45, LOCAL.format("arabica-son-la"), [],
+     "Thuận Châu, Sơn La", "Rang vừa (Medium)", "500g", False,
+     "Sơ chế tự nhiên (natural) phơi nguyên trái. Hương trái cây chín, vị ngọt mật ong, chua dịu – rất hợp pha phin lẫn pour-over."),
+    ("Robusta Gia Lai Honey", 0, 175000, 195000, 50, LOCAL.format("robusta-gia-lai-honey"), [],
+     "Chư Sê, Gia Lai", "Rang vừa-đậm", "500g", True,
+     "Robusta sơ chế honey hiếm gặp: đắng dịu, hậu ngọt đường nâu, ít chua. Pha cà phê sữa đá béo thơm khó cưỡng."),
+    ("Moka Cầu Đất Thượng Hạng", 0, 290000, None, 16, LOCAL.format("moka-cau-dat"), [],
+     "Cầu Đất, Đà Lạt", "Rang vừa (Medium)", "250g", True,
+     "Giống Moka (Bourbon) quý hiếm của Đà Lạt. Hương thơm nồng nàn, chua thanh, hậu vị socola – niềm tự hào cà phê Việt."),
+    ("Typica Lâm Đồng", 0, 230000, None, 22, LOCAL.format("typica-lam-dong"), [],
+     "Lạc Dương, Lâm Đồng", "Rang sáng (Light)", "250g", False,
+     "Giống Typica cổ, thân nhẹ, hương hoa trắng và vị trà đen. Pha V60 để cảm nhận rõ độ tinh tế."),
+    ("Catimor Khe Sanh", 0, 155000, None, 70, LOCAL.format("catimor-khe-sanh"), [],
+     "Khe Sanh, Quảng Trị", "Rang đậm (Dark)", "500g", False,
+     "Arabica Catimor vùng Khe Sanh: vị đậm, đắng mạnh, thoảng mùi khói gỗ. Giá mềm, rất hợp pha phin hằng ngày."),
+    ("Kenya AA Nyeri", 0, 360000, None, 12, LOCAL.format("kenya-aa"), [],
+     "Nyeri, Kenya", "Rang sáng (Light)", "250g", False,
+     "Hạt AA to đều nhất Kenya. Chua sáng vị lý chua đen và bưởi, hậu ngọt rõ, body mọng nước."),
+    ("Brazil Santos", 0, 240000, None, 30, LOCAL.format("brazil-santos"), [],
+     "Minas Gerais, Brazil", "Rang vừa (Medium)", "500g", False,
+     "Thân dày, hương hạt dẻ và socola sữa, độ chua thấp – nền tảng của nhiều blend espresso nổi tiếng."),
+    ("Guatemala Antigua", 0, 310000, None, 3, LOCAL.format("guatemala-antigua"), [],
+     "Antigua, Guatemala", "Rang vừa (Medium)", "250g", False,
+     "Trồng trên đất núi lửa: vị cacao, gia vị ấm và chua nhẹ kiểu táo đỏ. Cân bằng, dễ uống."),
+    ("Sumatra Mandheling", 0, 330000, None, 18, LOCAL.format("sumatra-mandheling"), [],
+     "Sumatra, Indonesia", "Rang đậm (Dark)", "250g", False,
+     "Sơ chế bóc vỏ ướt đặc trưng Indonesia: body dày, vị đất, thảo mộc và socola đen, chua rất thấp."),
+    ("Cà Phê Chồn Đặc Biệt", 0, 590000, 690000, 8, LOCAL.format("ca-phe-chon"), [],
+     "Buôn Ma Thuột, Đắk Lắk", "Rang vừa (Medium)", "250g", True,
+     "Hạt lên men tự nhiên theo phương pháp mô phỏng, vị êm mượt, đắng nhẹ, hậu ngọt kéo dài. Món quà biếu sang trọng."),
+
+    # Cà phê bột (4)
+    ("Bột Phin Rang Bơ", 1, 105000, 120000, 60, LOCAL.format("bot-phin-rang-bo"), [],
+     "Đắk Lắk", "Rang đậm (Dark)", "500g", False,
+     "Rang cùng bơ theo kiểu truyền thống Sài Gòn xưa: thơm béo, đậm đà, nước cốt sánh – pha sữa đá tuyệt vời."),
+    ("Bột Espresso Blend 70/30", 1, 140000, None, 40, LOCAL.format("bot-espresso-blend"), [],
+     "Arabica 70% + Robusta 30%", "Rang vừa-đậm", "250g", False,
+     "Xay mịn chuẩn máy espresso: crema dày màu hạt dẻ, vị socola đắng, hậu ngọt caramel."),
+    ("Bột Arabica Pour-over", 1, 150000, None, 25, LOCAL.format("bot-arabica-pour-over"), [],
+     "Cầu Đất, Lâm Đồng", "Rang sáng (Light)", "250g", False,
+     "Xay vừa (medium-fine) dành cho V60, Chemex, Kalita. Chua thanh, hương hoa, kết thúc sạch."),
+    ("Bột Cà Phê Hộp Thiếc", 1, 165000, None, 20, LOCAL.format("bot-hop-thiec"), [],
+     "Lâm Đồng", "Rang vừa (Medium)", "250g", False,
+     "Đóng hộp thiếc kín khí, có van một chiều giữ hương lâu đến 6 tháng. Thiết kế đẹp, hợp làm quà tặng."),
+
+    # Cà phê pha sẵn (4)
+    ("Cà Phê Hòa Tan Đen Nguyên Chất", 2, 89000, None, 90, LOCAL.format("hoa-tan-den"), [],
+     "Sấy lạnh (freeze-dried)", None, "Hũ 100g", False,
+     "Cà phê hòa tan sấy lạnh giữ trọn hương vị, 0 đường 0 sữa. Chỉ cần nước nóng hoặc lạnh là có ly đen chuẩn vị."),
+    ("Cold Brew Robusta Chai 250ml", 2, 39000, None, 40, LOCAL.format("cold-brew-robusta"), [],
+     "Ủ lạnh 20 giờ", None, "Chai 250ml", False,
+     "Robusta ủ lạnh 20 giờ: đậm, mượt, gần như không đắng gắt. Lắc đều, rót với đá hoặc pha thêm sữa."),
+    ("Cà Phê Đen Đá Pha Sẵn", 2, 25000, None, 0, LOCAL.format("den-da-pha-san"), [],
+     "Pha phin mỗi sáng", None, "Ly 350ml", False,
+     "Đen đá pha phin từ Robusta Buôn Ma Thuột, giao trong ngày. Tỉnh táo tức thì cho buổi sáng bận rộn."),
+    ("Latte Yến Mạch Đóng Ly", 2, 45000, None, 25, LOCAL.format("latte-yen-mach"), [],
+     "Espresso + sữa yến mạch", None, "Ly 350ml", False,
+     "Espresso Blend House cùng sữa yến mạch thuần chay – béo nhẹ, thơm ngũ cốc, không lactose."),
+
+    # Trà & Matcha (3)
+    ("Matcha Culinary Làm Bánh", 3, 150000, None, 30, LOCAL.format("matcha-culinary"), [],
+     "Kagoshima, Nhật Bản", None, "100g", False,
+     "Matcha culinary grade màu xanh tươi, vị đậm – dùng làm bánh, kem, latte với chi phí hợp lý."),
+    ("Trà Lài Ngọc Trai", 3, 180000, None, 20, LOCAL.format("tra-lai-ngoc-trai"), [],
+     "Phúc Kiến", None, "100g", False,
+     "Búp trà xanh vo tròn như ngọc trai, ướp hoa nhài tươi nhiều lần. Pha ra nước vàng trong, hương nhài thanh khiết."),
+    ("Trà Xanh Thái Nguyên", 3, 120000, None, 45, LOCAL.format("tra-xanh-thai-nguyen"), [],
+     "Tân Cương, Thái Nguyên", None, "200g", False,
+     "Đệ nhất danh trà Việt: cánh nhỏ, nước xanh, vị chát dịu và hậu ngọt sâu. Pha với nước 80°C."),
+
+    # Dụng cụ pha chế (3)
+    ("Ấm Moka Pot 6 Cup", 4, 420000, 490000, 14, LOCAL.format("am-moka-pot"), [],
+     "Nhôm đúc nguyên khối", None, "300ml (6 cup)", False,
+     "Pha cà phê đậm như espresso ngay trên bếp ga/bếp điện. Van an toàn, tay cầm cách nhiệt."),
+    ("Máy Xay Điện Cổ Điển", 4, 690000, None, 6, LOCAL.format("may-xay-co-dien"), [],
+     "Lưỡi dao inox", None, "Cối 80g", False,
+     "Thiết kế vintage, xay nhanh 20 giây cho 1 mẻ. Phù hợp xay phin và French press."),
+    ("Máy Pha Espresso Gia Đình", 4, 2490000, 2890000, 5, LOCAL.format("may-pha-espresso"), [],
+     "Áp suất 15 bar", None, "Bình nước 1.2L", True,
+     "Pha espresso, cappuccino, latte tại nhà: áp suất 15 bar, vòi đánh sữa, làm nóng trong 30 giây."),
+
+    # Bánh & đồ ăn kèm (3)
+    ("Cheesecake Nướng Basque", 5, 69000, None, 15, LOCAL.format("cheesecake-pistachio"), [],
+     "Phô mai kem Pháp", None, "1 phần", False,
+     "Mặt bánh cháy caramel, ruột phô mai mềm tan như kem. Ăn kèm Americano là chuẩn bài."),
+    ("Muffin Socola Chip", 5, 39000, None, 28, LOCAL.format("muffin-socola"), [],
+     "Socola Bỉ", None, "1 cái", False,
+     "Bánh nướng mỗi sáng, xốp mềm, đầy socola chip tan chảy. Hâm nóng 10 giây cho thơm hơn."),
+    ("Brownie Socola Cam", 5, 45000, None, 2, LOCAL.format("brownie-socola-cam"), [],
+     "Cacao 70% & vỏ cam", None, "1 miếng", False,
+     "Brownie đặc dẻo cacao 70%, điểm vỏ cam thơm mát – cân bằng vị đắng của espresso."),
+]
+
+MORE_DRINKS = [
+    ("Socola Nóng Kem Tươi", 45000, LOCAL.format("socola-nong"), True, False,
+     "Socola Bỉ nấu chảy cùng sữa tươi, phủ kem tươi và bột cacao – ấm áp cho ngày mưa."),
+    ("Sinh Tố Kiwi", 49000, LOCAL.format("sinh-to-kiwi"), False, False,
+     "Kiwi tươi xay cùng sữa chua và mật ong – chua ngọt, giàu vitamin C, không caffeine."),
+    ("Sinh Tố Dâu Sữa Chua", 49000, LOCAL.format("sinh-to-dau"), False, False,
+     "Dâu tây Đà Lạt xay cùng sữa chua Hy Lạp, béo mịn, chua ngọt dịu."),
+]
+
+PRODUCTS += MORE_PRODUCTS
+DRINKS += MORE_DRINKS
+
+
+def pic(x: str) -> str:
+    """Ảnh local (/static/...) giữ nguyên, còn lại là id ảnh Unsplash."""
+    return x if x.startswith("/") else IMG.format(x)
+
+
 # Hệ số giá theo khối lượng, tính từ khối lượng gốc trong PRODUCTS
 WEIGHT_FACTORS = {
     "250g": {"250g": 1, "500g": 1.8, "1kg": 3.4},
@@ -195,7 +312,7 @@ def seed(reset: bool = False) -> None:
         products = []
         for i, (name, ci, price, orig, stock, img, extra, origin, roast, weight, feat, desc) in enumerate(PRODUCTS):
             p = Product(name=name, slug=slugify(name), category=cats[ci], price=price, original_price=orig,
-                        stock=stock, image_url=IMG.format(img), images="\n".join(IMG.format(x) for x in extra),
+                        stock=stock, image_url=pic(img), images="\n".join(pic(x) for x in extra),
                         origin=origin, roast_level=roast, weight=weight, is_featured=feat, description=desc,
                         has_grind_option=ci == 0, created_at=datetime.now() - timedelta(days=60 - i * 2))
             if ci in (0, 1) and weight in WEIGHT_FACTORS:
@@ -205,7 +322,7 @@ def seed(reset: bool = False) -> None:
             p.search_text = build_search_text(p)
             products.append(p)
         for j, (name, price, img, tops, feat, desc) in enumerate(DRINKS):
-            p = Product(name=name, slug=slugify(name), category=cats[6], image_url=IMG.format(img), images="",
+            p = Product(name=name, slug=slugify(name), category=cats[6], image_url=pic(img), images="",
                         price=price, stock=0, weight="Size S / M / L", is_featured=feat, description=desc,
                         is_drink=True, allow_toppings=tops, created_at=datetime.now() - timedelta(days=5, hours=j),
                         variants=[ProductVariant(label=sz, price=price + extra, stock=60, sort_order=k)
@@ -230,7 +347,7 @@ def seed(reset: bool = False) -> None:
         # Đơn hàng lịch sử 30 ngày gần nhất để dashboard có dữ liệu
         now = datetime.now()
         purchased: set[tuple[int, int]] = set()
-        for n in range(70):
+        for n in range(110):
             user = random.choice(customers)
             age_days = random.randint(0, 29)
             created = now - timedelta(days=age_days, hours=random.randint(0, 12), minutes=random.randint(0, 59))
@@ -279,7 +396,7 @@ def seed(reset: bool = False) -> None:
             recalc_rating(db, p)
 
         db.commit()
-        print(f"✔ Đã tạo {len(products)} sản phẩm, {len(cats)} danh mục, {len(toppings)} topping, {len(customers)} khách hàng, 70 đơn hàng.")
+        print(f"✔ Đã tạo {len(products)} sản phẩm, {len(cats)} danh mục, {len(toppings)} topping, {len(customers)} khách hàng, 110 đơn hàng.")
         print("  Admin: admin@beanbrew.vn / admin123   |   Khách: user@beanbrew.vn / user123")
     finally:
         db.close()

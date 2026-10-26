@@ -26,6 +26,7 @@ class Settings:
 
     # Upload ảnh
     UPLOAD_DIR: Path = BASE_DIR / "uploads"
+    STATIC_DIR: Path = BASE_DIR / "static"
 
     # AI Chatbot: ưu tiên Gemini, sau đó OpenAI, không có key -> chế độ offline
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")

@@ -30,6 +30,8 @@ app.include_router(admin.router)
 app.include_router(chat.router)
 app.include_router(wishlist.router)
 app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")
+# Ảnh sản phẩm mẫu (CC0, đã tải về và thu nhỏ) – nằm trong repo nên không phụ thuộc link ngoài
+app.mount("/static", StaticFiles(directory=settings.STATIC_DIR), name="static")
 
 
 @app.get("/api/health", tags=["System"])
