@@ -61,9 +61,9 @@ export function StatusBadge({ status }: { status: OrderStatus }) {
 export function EmptyState({ icon, title, desc, action }: { icon: ReactNode; title: string; desc?: string; action?: ReactNode }) {
   return (
     <div className="flex flex-col items-center justify-center px-4 py-16 text-center">
-      <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-coffee-50 text-coffee-400">{icon}</div>
-      <h3 className="text-lg font-semibold text-coffee-800">{title}</h3>
-      {desc && <p className="mt-1 max-w-sm text-sm text-coffee-500">{desc}</p>}
+      <div className="mb-5 flex h-20 w-20 items-center justify-center rounded-full border border-coffee-100 bg-coffee-50 text-3xl text-caramel-600">{icon}</div>
+      <h3 className="font-display text-2xl font-semibold text-coffee-900 sm:text-3xl">{title}</h3>
+      {desc && <p className="mt-2 max-w-sm text-sm text-coffee-500">{desc}</p>}
       {action && <div className="mt-5">{action}</div>}
     </div>
   )
@@ -103,10 +103,10 @@ export function Pagination({ page, pages, onChange }: { page: number; pages: num
 }
 
 export function QuantityInput({ value, max, onChange, size = 'md' }: { value: number; max: number; onChange: (v: number) => void; size?: 'sm' | 'md' }) {
-  const h = size === 'sm' ? 'h-8' : 'h-11'
+  const h = size === 'sm' ? 'h-9' : 'h-12'
   const w = size === 'sm' ? 'w-8' : 'w-11'
   return (
-    <div className={`inline-flex ${h} items-center rounded-xl border border-coffee-100 bg-surface`}>
+    <div className={`inline-flex ${h} items-center rounded-full border border-coffee-200 bg-surface px-1`}>
       <button type="button" className={`${w} flex h-full items-center justify-center text-coffee-600 hover:text-coffee-900 disabled:opacity-30`}
         onClick={() => onChange(value - 1)} disabled={value <= 1} aria-label="Giảm">
         <Minus size={14} />

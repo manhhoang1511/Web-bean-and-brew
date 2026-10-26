@@ -16,7 +16,7 @@ const mixColor = (p: number) => {
 }
 
 const CHAPTERS = [
-  { kicker: 'Bean & Brew — Since 2024', lines: [['Cà phê'], ['rang ', <em key="e">thủ công</em>], ['cho người tinh tế.']],
+  { kicker: 'Bean & Brew — Since 2024', lines: [['Cà phê rang'], [<em key="e">thủ công</em>], ['cho người tinh tế.']],
     caption: 'Cuộn chậm để bắt đầu hành trình của một tách cà phê.' },
   { kicker: 'Chương 02 — Chọn hạt', lines: [['Từng hạt'], ['được chọn'], [<em key="e">bằng tay.</em>]],
     caption: 'Arabica Cầu Đất · Robusta Buôn Ma Thuột · Ethiopia Yirgacheffe · rang mới mỗi thứ Hai.' },
@@ -33,8 +33,10 @@ export default function Immersive3D() {
   const ctaRef = useMagnetic<HTMLAnchorElement>(0.3)
 
   const sectionRef = useScrollProgress<HTMLElement>('through', (p) => {
+    const bg = mixColor(p)
     sceneRef.current?.setProgress(p)
-    if (stageRef.current) stageRef.current.style.backgroundColor = mixColor(p)
+    sceneRef.current?.setBackground(bg)
+    if (stageRef.current) stageRef.current.style.backgroundColor = bg
     setChapter(p < 0.3 ? 0 : p < 0.66 ? 1 : 2)
   })
 
@@ -91,14 +93,15 @@ export default function Immersive3D() {
         <div className="pointer-events-none absolute inset-0 flex items-end pb-28 sm:items-center sm:pb-0">
           <div className="container-page">
             {/* Chữ luôn nằm phía đối diện tách: trái -> phải -> trái */}
-            <div key={chapter} className={`max-w-xl ${chapter === 1 ? 'lg:ml-auto lg:text-right' : ''}`}>
+            <div key={chapter} className={`sm:w-fit ${chapter === 1 ? 'lg:ml-auto lg:text-right' : ''}`}>
               <p className="editorial-line text-xs font-semibold uppercase tracking-[0.35em] text-caramel-400" style={{ '--l': 0 } as CSSProperties}>
                 {CHAPTERS[chapter].kicker}
               </p>
-              <h1 className="mt-5 font-display text-5xl font-semibold leading-[0.95] tracking-tight [text-shadow:0_4px_30px_rgb(0_0_0/.45)] sm:text-7xl lg:text-8xl">
+              {/* Cỡ chữ co giãn theo bề rộng màn hình; mỗi dòng không tự xuống hàng (giữ cụm "thủ công" liền nhau) */}
+              <h1 className="mt-5 font-display text-[clamp(2.9rem,5.2vw,7.5rem)] font-semibold leading-[0.95] tracking-tight [text-shadow:0_4px_30px_rgb(0_0_0/.45)]">
                 {CHAPTERS[chapter].lines.map((line, i) => (
                   <span key={i} className="block overflow-hidden pb-[0.12em]">
-                    <span className="editorial-line block [&_em]:font-normal [&_em]:italic [&_em]:text-caramel-400" style={{ '--l': i + 1 } as CSSProperties}>{line}</span>
+                    <span className="editorial-line block sm:whitespace-nowrap [&_em]:font-normal [&_em]:italic [&_em]:text-caramel-400" style={{ '--l': i + 1 } as CSSProperties}>{line}</span>
                   </span>
                 ))}
               </h1>
@@ -123,13 +126,13 @@ export default function Immersive3D() {
         {/* Bộ đếm chương + thanh tiến độ dọc (kiểu Dogstudio) */}
         <div className="absolute bottom-8 left-6 flex items-end gap-4 sm:left-10" aria-hidden>
           <span className="font-display text-sm tabular-nums text-latte-200">
-            <span className="text-2xl text-latte-50">{String(chapter + 1).padStart(2, '0')}</span> / 03
+            <span className="text-4xl text-latte-50">{String(chapter + 1).padStart(2, '0')}</span> / 03
           </span>
-          <span className="relative h-24 w-px bg-white/20">
+          <span className="relative h-28 w-px bg-white/20">
             <span className="absolute inset-x-0 top-0 bg-caramel-400" style={{ height: 'calc(var(--p, 0) * 100%)' }} />
           </span>
         </div>
-        <div className={`absolute bottom-8 left-1/2 flex -translate-x-1/2 flex-col items-center gap-2 text-[11px] uppercase tracking-[0.3em] text-latte-300 transition-opacity duration-500 ${chapter === 0 ? 'opacity-100' : 'opacity-0'}`}>
+        <div className={`absolute bottom-8 left-1/2 flex -translate-x-1/2 flex-col items-center gap-2 text-xs uppercase tracking-[0.3em] text-latte-300 transition-opacity duration-500 ${chapter === 0 ? 'opacity-100' : 'opacity-0'}`}>
           Cuộn <ArrowDown size={14} className="animate-bounce" />
         </div>
       </div>

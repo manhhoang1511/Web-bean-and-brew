@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type CSSProperties } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { Eye, EyeOff } from 'lucide-react'
@@ -11,23 +11,39 @@ import { useDocumentTitle } from '../lib/hooks'
 
 const SIDE_IMG = 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=1000&q=80&auto=format&fit=crop'
 
+/** Khung trang đăng nhập/đăng ký: nửa trái tối kiểu tạp chí (đồng bộ trang chủ), nửa phải là form */
 function AuthShell({ title, subtitle, children }: { title: string; subtitle: React.ReactNode; children: React.ReactNode }) {
+  const line = (l: number) => ({ '--l': l }) as CSSProperties
   return (
-    <div className="grid min-h-screen lg:grid-cols-2">
-      <div className="relative hidden lg:block">
-        <img src={SIDE_IMG} alt="" className="absolute inset-0 h-full w-full object-cover" />
-        <div className="absolute inset-0 bg-gradient-to-t from-espresso-900/90 to-espresso-900/30" />
-        <div className="absolute bottom-12 left-12 right-12 text-latte-50">
-          <p className="font-display text-4xl font-bold leading-tight">“Cuộc sống bắt đầu sau tách cà phê đầu tiên.”</p>
-          <p className="mt-3 text-latte-200">— Bean & Brew</p>
+    <div className="grid min-h-screen lg:grid-cols-[1.1fr_1fr]">
+      <div className="relative isolate hidden overflow-hidden bg-espresso-900 text-latte-50 lg:flex lg:flex-col lg:justify-between lg:p-14">
+        <img src={SIDE_IMG} alt="" className="absolute inset-0 -z-10 h-full w-full object-cover opacity-45 animate-kenburns" />
+        <div className="absolute inset-0 -z-10 bg-gradient-to-t from-espresso-900 via-espresso-900/50 to-espresso-900/70" />
+        <div className="grain pointer-events-none absolute inset-0" aria-hidden />
+        <Logo light />
+        <div>
+          <p className="editorial-line flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.35em] text-caramel-400" style={line(0)}>
+            <span className="h-px w-10 bg-caramel-400" /> Bean & Brew — Since 2024
+          </p>
+          <h2 className="mt-6 font-display text-[clamp(3rem,4.6vw,5.5rem)] font-semibold leading-[0.98] tracking-tight">
+            {[<>Cuộc sống</>, <>bắt đầu sau</>, <em key="e" className="font-normal italic text-caramel-400">tách đầu tiên.</em>].map((t, i) => (
+              <span key={i} className="-mt-[0.15em] block overflow-hidden pb-[0.1em] pt-[0.15em]"><span className="editorial-line block" style={line(i + 1)}>{t}</span></span>
+            ))}
+          </h2>
+          <div className="editorial-line mt-10 flex gap-10 border-t border-white/15 pt-6" style={line(5)}>
+            {[['30+', 'Hộ nông dân'], ['5kg', 'Mỗi mẻ rang'], ['48h', 'Giao tận nhà']].map(([n, l]) => (
+              <div key={l}><p className="font-display text-3xl font-semibold">{n}</p><p className="mt-1 text-[11px] uppercase tracking-[0.22em] text-latte-300">{l}</p></div>
+            ))}
+          </div>
         </div>
       </div>
-      <div className="flex items-center justify-center px-4 py-12">
-        <div className="w-full max-w-sm animate-slide-up">
-          <Logo />
-          <h1 className="mt-10 font-display text-3xl font-bold">{title}</h1>
-          <p className="mt-2 text-sm text-coffee-500">{subtitle}</p>
-          <div className="mt-8">{children}</div>
+      <div className="flex items-center justify-center px-4 py-12 sm:px-10">
+        <div className="w-full max-w-md animate-slide-up">
+          <div className="lg:hidden"><Logo /></div>
+          <Link to="/" className="link-underline hidden text-xs font-semibold uppercase tracking-[0.22em] text-coffee-400 hover:text-coffee-800 lg:inline">← Về trang chủ</Link>
+          <h1 className="mt-10 font-display text-4xl font-semibold tracking-tight sm:text-5xl">{title}</h1>
+          <p className="mt-3 text-sm text-coffee-500">{subtitle}</p>
+          <div className="mt-10">{children}</div>
         </div>
       </div>
     </div>
@@ -75,7 +91,7 @@ export function Login() {
   const { submit, loading, redirect } = useAuthSubmit('/api/auth/login')
 
   return (
-    <AuthShell title="Chào mừng trở lại 👋" subtitle={<>Chưa có tài khoản? <Link to={`/register${redirect ? `?redirect=${redirect}` : ''}`} className="font-semibold text-caramel-600 hover:underline">Đăng ký ngay</Link></>}>
+    <AuthShell title="Chào mừng trở lại." subtitle={<>Chưa có tài khoản? <Link to={`/register${redirect ? `?redirect=${redirect}` : ''}`} className="font-semibold text-caramel-600 hover:underline">Đăng ký ngay</Link></>}>
       <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); submit({ email, password }, (u) => `Xin chào, ${u.full_name}!`) }}>
         <div>
           <label className="label" htmlFor="email">Email</label>
@@ -88,9 +104,9 @@ export function Login() {
           </div>
           <PasswordInput id="password" value={password} onChange={setPassword} />
         </div>
-        <button className="btn-primary w-full py-3" disabled={loading}>{loading && <Spinner className="h-4 w-4" />} Đăng nhập</button>
+        <button className="btn-primary w-full py-3.5" disabled={loading}>{loading && <Spinner className="h-4 w-4" />} Đăng nhập</button>
       </form>
-      <div className="mt-8 rounded-xl border border-dashed border-coffee-200 bg-cream-100 p-4 text-xs text-coffee-600">
+      <div className="mt-8 rounded-2xl border border-dashed border-coffee-200 bg-cream-100 p-4 text-xs text-coffee-600">
         <p className="mb-2 font-semibold">Tài khoản demo (bấm để điền):</p>
         {[['admin@beanbrew.vn', 'admin123', 'Quản trị viên'], ['user@beanbrew.vn', 'user123', 'Khách hàng']].map(([e, p, role]) => (
           <button key={e} type="button" onClick={() => { setEmail(e); setPassword(p) }} className="block w-full rounded-lg px-2 py-1 text-left hover:bg-surface">
@@ -138,7 +154,7 @@ export function Register() {
           </div>
         </div>
         <p className="text-xs text-coffee-400">Mật khẩu tối thiểu 6 ký tự.</p>
-        <button className="btn-primary w-full py-3" disabled={loading}>{loading && <Spinner className="h-4 w-4" />} Đăng ký</button>
+        <button className="btn-primary w-full py-3.5" disabled={loading}>{loading && <Spinner className="h-4 w-4" />} Đăng ký</button>
       </form>
     </AuthShell>
   )
@@ -182,7 +198,7 @@ export function ForgotPassword() {
             <label className="label" htmlFor="email">Email</label>
             <input id="email" type="email" className="input" value={email} onChange={(e) => setEmail(e.target.value)} required autoFocus />
           </div>
-          <button className="btn-primary w-full py-3" disabled={loading}>{loading && <Spinner className="h-4 w-4" />} Gửi liên kết</button>
+          <button className="btn-primary w-full py-3.5" disabled={loading}>{loading && <Spinner className="h-4 w-4" />} Gửi liên kết</button>
         </form>
       )}
     </AuthShell>
@@ -224,7 +240,7 @@ export function ResetPassword() {
           <label className="label" htmlFor="confirm">Nhập lại mật khẩu</label>
           <PasswordInput id="confirm" value={confirm} onChange={setConfirm} />
         </div>
-        <button className="btn-primary w-full py-3" disabled={loading || !token}>{loading && <Spinner className="h-4 w-4" />} Lưu mật khẩu mới</button>
+        <button className="btn-primary w-full py-3.5" disabled={loading || !token}>{loading && <Spinner className="h-4 w-4" />} Lưu mật khẩu mới</button>
         {!token && <p className="text-sm text-rose-600">Thiếu mã đặt lại – hãy mở đúng liên kết được gửi.</p>}
       </form>
     </AuthShell>

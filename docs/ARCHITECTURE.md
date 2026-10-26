@@ -188,12 +188,20 @@ AdminLayout: toast + âm báo, badge số đơn chờ; store.version++ → Dashb
 - Pháo giấy: `<canvas>` + vật lý đơn giản (vận tốc, trọng lực, lực cản), tự hủy sau 3 giây.
 
 ### Cảnh 3D (`components/three/CoffeeScene.ts`, `components/home/Immersive3D.tsx`)
-- **Không dùng file mô hình**: tách & đĩa = `LatheGeometry` (xoay đường biên dạng quanh trục); hạt = hình cầu bóp thành elip rồi **dịch đỉnh** tạo rãnh chữ S; 90 hạt vẽ bằng **`InstancedMesh`** (1 lần gọi vẽ cho cả 90 hạt); latte art vẽ bằng Canvas 2D làm texture; khói & bụi là `Points` + **shader GLSL** (vị trí tính trên GPU).
-- Ánh sáng: môi trường `RoomEnvironment` (PMREM) cho phản chiếu sứ + đèn chính ấm + đèn viền caramel; tone mapping ACES.
+- **Không dùng file mô hình**: tách & đĩa = `LatheGeometry` (xoay đường biên dạng quanh trục); hạt = hình cầu bóp thành elip rồi **dịch đỉnh** tạo rãnh chữ S; ~28 hạt vẽ bằng **`InstancedMesh`** (1 lần gọi vẽ), vị trí rải bằng *rejection sampling* để không che tách và không lấn vùng chữ; **sương mù (`Fog`)** cùng màu nền làm hạt xa chìm dần → chiều sâu; latte art trái tim vẽ bằng Canvas 2D; **khói** là dải mặt phẳng + nhiễu **fbm** trong fragment shader, luôn quay về camera; bụi sáng là `Points` + shader GLSL.
+- Ánh sáng 3 điểm kiểu chụp sản phẩm: `RoomEnvironment` (PMREM) cho phản chiếu sứ + đèn chính ấm + đèn viền caramel + đèn phụ; bóng đổ mềm dưới đĩa là texture gradient (rẻ hơn shadow map); tone mapping ACES.
+- Vị trí tách tính theo **độ rộng khung nhìn** (`tan(fov/2)·khoảng cách·aspect`) → màn hình càng rộng tách càng ra xa giữa, chữ lớn không bao giờ đè lên tách; quai tách luôn quay ra phía ngoài.
 - **Điều khiển bằng cuộn**: section cao 320vh, phần trong `sticky`; `useScrollProgress` truyền tiến độ 0..1 → camera/tách/hạt nội suy theo 3 chương (`smoothstep`). Nội suy theo **thời gian** `1 - e^(-dt·k)` để máy nhanh hay chậm đều khớp vị trí cuộn. Nền section đổi màu bằng nội suy RGB.
 - **Hiệu năng**: three.js nạp động (`import()`, chunk riêng ~124KB gzip) chỉ ở trang chủ; vòng render chỉ chạy khi section hiện trên màn hình (IntersectionObserver); `devicePixelRatio ≤ 2`; vector tạm dùng lại mỗi khung hình; giải phóng geometry/material/texture khi rời trang; lỗi WebGL → ảnh tĩnh.
 - **Cuộn mượt (Lenis)** chỉ bật ở trang chủ, tắt khi `prefers-reduced-motion` hoặc màn cảm ứng; popup video gọi `lenis.stop()`; vùng cuộn riêng (khung chat) gắn `data-lenis-prevent`.
 - Header tự chuyển kính mờ khi nằm trên vùng tối (`[data-overlay-header]`).
+
+### Hệ thống giao diện chung (đồng bộ mọi trang với trang chủ)
+- **`<PageHero>`**: đầu trang tối dùng chung cho Cửa hàng, Giỏ hàng, Thanh toán, Đơn hàng, Yêu thích, Tài khoản – nền espresso + film grain + quầng sáng, tiêu đề serif trượt lên từng dòng, số liệu lớn (`HeroStat`), đường dẫn (breadcrumb). Header luôn `fixed`; trang nào có hero (`hasHero()` trong `Layout`) thì header nổi trong suốt, trang khác được chừa `pt-16`.
+- **Màn chuyển trang** (`PageCurtain`): tấm espresso kéo lên khi đổi đường dẫn, kiểu Dogstudio; bỏ qua lần tải đầu.
+- **Thẻ sản phẩm** kiểu tạp chí: ảnh dọc 4:5, chữ serif, nút thêm giỏ trượt lên khi rê chuột (`@media (hover:none)` → luôn hiện trên điện thoại).
+- **Chi tiết sản phẩm**: ảnh lớn dính khi cuộn + kính lúp (đổi `transform-origin` theo con trỏ), bảng thông số kẻ mảnh, lựa chọn dạng viên thuốc.
+- Màn hình rất lớn (≥1800px) phóng cỡ chữ gốc `html` → mọi kích thước `rem` to theo, không còn nội dung bé xíu giữa khoảng trống.
 
 ## 4b. Triển khai (Docker)
 `docker compose up --build` → nginx (frontend) ở cổng 8080 phục vụ file tĩnh đã build, chuyển `/api` và `/uploads` sang container FastAPI; CSDL SQLite và ảnh upload nằm trong volume nên không mất khi khởi động lại.

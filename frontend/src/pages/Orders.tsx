@@ -6,9 +6,10 @@ import { api, errorMessage, imageUrl } from '../api/client'
 import type { Order, OrderStatus, Product } from '../api/types'
 import { ConfirmDialog, EmptyState, PageLoader, Spinner, StatusBadge } from '../components/ui'
 import { useCart } from '../store/cart'
-import { PAYMENT_METHOD, PAYMENT_STATUS, formatDate, formatVND } from '../lib/format'
+import { PAYMENT_METHOD, PAYMENT_STATUS, formatDate, formatShortVND, formatVND } from '../lib/format'
 import { useDocumentTitle } from '../lib/hooks'
 import { fireConfetti } from '../lib/confetti'
+import PageHero, { HeroStat } from '../components/PageHero'
 
 const TABS: [OrderStatus | '', string][] = [
   ['', 'Tất cả'], ['pending', 'Đang xử lý'], ['shipping', 'Đang giao'], ['completed', 'Hoàn thành'], ['cancelled', 'Đã hủy'],
@@ -26,15 +27,23 @@ export function MyOrders() {
   const shown = orders?.filter((o) => !tab || o.status === tab) ?? []
 
   return (
-    <div className="container-page max-w-4xl py-10">
-      <h1 className="font-display text-3xl font-bold">Đơn hàng của tôi</h1>
-      <div className="scrollbar-thin mt-6 flex gap-2 overflow-x-auto border-b border-coffee-100">
+    <div>
+      <PageHero kicker="Tài khoản" title={['Đơn hàng', <em key="e">của tôi.</em>]}
+        aside={orders && orders.length > 0 ? (
+          <div className="flex gap-10">
+            <HeroStat value={orders.length} label="đơn hàng" />
+            <HeroStat value={formatShortVND(orders.filter((o) => o.status !== 'cancelled').reduce((n, o) => n + o.total, 0))} label="đã chi tiêu" />
+          </div>
+        ) : undefined}
+        crumbs={[{ label: 'Đơn hàng' }]} />
+      <div className="container-page max-w-5xl pt-10">
+      <div className="scrollbar-thin flex gap-7 overflow-x-auto border-b border-coffee-100">
         {TABS.map(([key, label]) => {
           const n = key ? orders?.filter((o) => o.status === key).length : orders?.length
           return (
             <button key={key} onClick={() => setTab(key)}
-              className={`-mb-px shrink-0 border-b-2 px-4 py-3 text-sm font-medium transition ${tab === key ? 'border-caramel-500 text-caramel-600' : 'border-transparent text-coffee-500 hover:text-coffee-800'}`}>
-              {label} {!!n && <span className="ml-1 text-xs text-coffee-300">({n})</span>}
+              className={`-mb-px shrink-0 border-b-2 py-4 text-sm font-medium transition ${tab === key ? 'border-caramel-500 text-coffee-900' : 'border-transparent text-coffee-400 hover:text-coffee-800'}`}>
+              {label}{!!n && <sup className="ml-1 text-[10px] text-coffee-300">{n}</sup>}
             </button>
           )
         })}
@@ -43,12 +52,12 @@ export function MyOrders() {
       {!orders ? <PageLoader /> : shown.length === 0 ? (
         <EmptyState icon={<Package size={30} />} title="Chưa có đơn hàng nào" action={<Link to="/shop" className="btn-primary">Mua sắm ngay</Link>} />
       ) : (
-        <div className="mt-6 space-y-4">
-          {shown.map((o) => (
-            <Link key={o.id} to={`/orders/${o.code}`} className="card block p-5 transition hover:border-coffee-200 hover:shadow-md">
+        <div className="divide-y divide-coffee-100">
+          {shown.map((o, idx) => (
+            <Link key={o.id} to={`/orders/${o.code}`} className="group block py-6 transition animate-slide-up" style={{ animationDelay: `${Math.min(idx, 8) * 50}ms` }}>
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-3">
-                  <p className="font-mono font-semibold">#{o.code}</p>
+                  <p className="font-display text-xl font-semibold transition group-hover:text-caramel-600">#{o.code}</p>
                   <StatusBadge status={o.status} />
                 </div>
                 <p className="text-sm text-coffee-400">{formatDate(o.created_at)}</p>
@@ -56,7 +65,7 @@ export function MyOrders() {
               <div className="mt-4 flex items-center gap-3">
                 <div className="flex -space-x-3">
                   {o.items.slice(0, 4).map((i) => (
-                    <img key={i.id} src={imageUrl(i.product_image)} alt="" className="h-12 w-12 rounded-lg border-2 border-white object-cover" />
+                    <img key={i.id} src={imageUrl(i.product_image)} alt="" className="h-14 w-12 rounded-xl border-2 border-cream-50 object-cover" />
                   ))}
                 </div>
                 <p className="flex-1 truncate text-sm text-coffee-600">
@@ -64,14 +73,15 @@ export function MyOrders() {
                 </p>
                 <div className="text-right">
                   <p className="text-xs text-coffee-400">Tổng tiền</p>
-                  <p className="font-bold">{formatVND(o.total)}</p>
+                  <p className="font-display text-lg font-semibold">{formatVND(o.total)}</p>
                 </div>
-                <ChevronRight size={18} className="text-coffee-300" />
+                <ChevronRight size={18} className="text-coffee-300 transition group-hover:translate-x-1 group-hover:text-caramel-600" />
               </div>
             </Link>
           ))}
         </div>
       )}
+      </div>
     </div>
   )
 }
@@ -188,33 +198,24 @@ export function OrderDetail() {
   const pay = PAYMENT_STATUS[order.payment_status]
 
   return (
-    <div className="container-page max-w-4xl py-10">
-      {success && (
-        <div className="card mb-8 flex flex-col items-center p-8 text-center animate-slide-up">
-          <span className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-600"><Check size={34} strokeWidth={3} /></span>
-          <h1 className="mt-4 font-display text-3xl font-bold">Đặt hàng thành công!</h1>
-          <p className="mt-2 text-coffee-500">Cảm ơn bạn đã mua sắm tại Bean & Brew. Mã đơn hàng của bạn là <b className="font-mono text-coffee-900">#{order.code}</b></p>
-          <div className="mt-6 flex gap-3">
-            <Link to="/shop" className="btn-outline">Tiếp tục mua sắm</Link>
-            <button className="btn-primary" onClick={() => setParams({})}>Xem chi tiết đơn</button>
-          </div>
+    <div>
+      <PageHero
+        kicker={success ? 'Đặt hàng thành công' : `Đặt lúc ${formatDate(order.created_at)}`}
+        title={success ? ['Cảm ơn bạn!', <em key="e">Tách cà phê đang đến.</em>] : ['Đơn hàng', <em key="e">#{order.code}</em>]}
+        subtitle={success ? <>Mã đơn hàng của bạn là <b className="font-mono text-latte-50">#{order.code}</b>. Chúng tôi sẽ rang, đóng gói và giao sớm nhất.</> : undefined}
+        aside={<div className="flex flex-col items-start gap-3 sm:items-end"><StatusBadge status={order.status} /><HeroStat value={formatVND(order.total)} label="tổng thanh toán" /></div>}
+        crumbs={[{ label: 'Đơn hàng', to: '/orders' }, { label: `#${order.code}` }]}>
+        <div className="flex flex-wrap gap-3">
+          {success && <Link to="/shop" className="btn bg-latte-50 text-espresso-900 hover:bg-caramel-400"><Check size={16} /> Tiếp tục mua sắm</Link>}
+          {success && <button className="btn border border-white/25 text-latte-50 hover:bg-white/10" onClick={() => setParams({})}>Ẩn lời cảm ơn</button>}
+          {order.status === 'pending' && <button className="btn border border-white/25 text-rose-300 hover:bg-white/10" onClick={() => setConfirmCancel(true)}>Hủy đơn</button>}
+          {(order.status === 'completed' || order.status === 'cancelled') && <button className="btn bg-latte-50 text-espresso-900 hover:bg-caramel-400" onClick={reorder}>Mua lại</button>}
         </div>
-      )}
-
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <Link to="/orders" className="text-sm text-coffee-400 hover:text-coffee-700">← Đơn hàng của tôi</Link>
-          <h2 className="mt-1 font-display text-2xl font-bold">Đơn hàng <span className="font-mono">#{order.code}</span></h2>
-          <p className="text-sm text-coffee-400">Đặt lúc {formatDate(order.created_at)}</p>
-        </div>
-        <div className="flex gap-2">
-          {order.status === 'pending' && <button className="btn-outline text-rose-600" onClick={() => setConfirmCancel(true)}>Hủy đơn</button>}
-          {(order.status === 'completed' || order.status === 'cancelled') && <button className="btn-primary" onClick={reorder}>Mua lại</button>}
-        </div>
-      </div>
+      </PageHero>
+      <div className="container-page max-w-5xl pt-10">
 
       {order.payment_method === 'qr' && order.payment_status === 'unpaid' && order.status !== 'cancelled' && (
-        <div className="card mb-6 flex flex-col items-center gap-5 border-2 border-caramel-500/40 p-6 sm:flex-row animate-slide-up">
+        <div className="card mb-6 flex flex-col items-center gap-6 rounded-[2rem] border-2 border-caramel-500/40 p-7 sm:flex-row animate-slide-up">
           <img className="h-40 w-40 rounded-xl border border-coffee-100 bg-surface p-2"
             src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(`BEANBREW|${order.code}|${order.total}`)}`} alt="Mã QR thanh toán" />
           <div className="flex-1 text-sm">
@@ -233,34 +234,34 @@ export function OrderDetail() {
         </div>
       )}
 
-      <div className="card p-6"><StatusTimeline status={order.status} /></div>
+      <div className="card rounded-[2rem] p-7"><StatusTimeline status={order.status} /></div>
 
       <div className="mt-6 grid gap-6 md:grid-cols-2">
-        <div className="card p-6 text-sm">
-          <h3 className="mb-3 font-semibold">Thông tin giao hàng</h3>
+        <div className="card rounded-[2rem] p-7 text-sm">
+          <h3 className="mb-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-coffee-400">Thông tin giao hàng</h3>
           <p className="font-medium">{order.shipping_name}</p>
           <p className="text-coffee-500">{order.shipping_phone}</p>
           <p className="text-coffee-500">{order.shipping_address}</p>
           {order.note && <p className="mt-2 rounded-lg bg-cream-100 p-2 text-coffee-600">📝 {order.note}</p>}
         </div>
-        <div className="card p-6 text-sm">
-          <h3 className="mb-3 font-semibold">Thanh toán</h3>
+        <div className="card rounded-[2rem] p-7 text-sm">
+          <h3 className="mb-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-coffee-400">Thanh toán</h3>
           <p>{PAYMENT_METHOD[order.payment_method]}</p>
           <p className={`font-semibold ${pay.className}`}>{pay.label}</p>
           {order.coupon_code && <p className="mt-2 text-coffee-500">Mã giảm giá: <b>{order.coupon_code}</b></p>}
         </div>
       </div>
 
-      <div className="card mt-6 p-6">
-        <h3 className="mb-4 font-semibold">Sản phẩm</h3>
+      <div className="card mt-6 rounded-[2rem] p-7">
+        <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-coffee-400">Sản phẩm</h3>
         <div className="divide-y divide-coffee-50">
           {order.items.map((i) => (
             <div key={i.id} className="flex items-center gap-4 py-3">
-              <img src={imageUrl(i.product_image)} alt="" className="h-16 w-16 rounded-xl object-cover" />
+              <img src={imageUrl(i.product_image)} alt="" className="h-20 w-16 rounded-xl object-cover" />
               <div className="flex-1">
                 {i.product_id ? (
-                  <Link to={`/products/${i.product_id}`} className="font-medium hover:text-caramel-600">{i.product_name}</Link>
-                ) : <p className="font-medium">{i.product_name}</p>}
+                  <Link to={`/products/${i.product_id}`} className="font-display text-lg font-semibold hover:text-caramel-600">{i.product_name}</Link>
+                ) : <p className="font-display text-lg font-semibold">{i.product_name}</p>}
                 {i.variant_label && <p className="text-xs text-coffee-500">{i.variant_label}</p>}
                 <p className="text-sm text-coffee-400">{formatVND(i.unit_price)} × {i.quantity}</p>
               </div>
@@ -272,13 +273,14 @@ export function OrderDetail() {
           <div className="flex justify-between"><dt className="text-coffee-500">Tạm tính</dt><dd>{formatVND(order.subtotal)}</dd></div>
           {order.discount > 0 && <div className="flex justify-between text-emerald-700"><dt>Giảm giá</dt><dd>-{formatVND(order.discount)}</dd></div>}
           <div className="flex justify-between"><dt className="text-coffee-500">Phí giao hàng</dt><dd>{order.shipping_fee ? formatVND(order.shipping_fee) : 'Miễn phí'}</dd></div>
-          <div className="flex justify-between pt-2 text-base"><dt className="font-semibold">Tổng cộng</dt><dd className="text-xl font-bold">{formatVND(order.total)}</dd></div>
+          <div className="flex items-baseline justify-between pt-2 text-base"><dt className="font-semibold">Tổng cộng</dt><dd className="font-display text-2xl font-semibold">{formatVND(order.total)}</dd></div>
         </dl>
       </div>
 
       <ConfirmDialog open={confirmCancel} title="Hủy đơn hàng?" danger loading={cancelling} confirmText="Hủy đơn"
         message={<>Bạn chắc chắn muốn hủy đơn <b>#{order.code}</b>? {order.payment_status === 'paid' && 'Số tiền đã thanh toán sẽ được hoàn lại.'}</>}
         onConfirm={cancel} onClose={() => setConfirmCancel(false)} />
+      </div>
     </div>
   )
 }

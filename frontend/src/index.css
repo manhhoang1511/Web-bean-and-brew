@@ -200,6 +200,16 @@
 .liquid img { transition: transform .9s cubic-bezier(.16,1,.3,1), filter .3s; }
 .liquid:hover img { filter: url(#liquid); }
 
+/* Màn chuyển trang: tấm nền kéo lên (lộ trang mới), chữ logo mờ dần */
+@keyframes curtain-up { 0%, 25% { transform: translateY(0); } 100% { transform: translateY(-100%); } }
+@keyframes curtain-logo { 0% { opacity: 0; transform: translateY(12px); } 20%, 45% { opacity: 1; transform: none; } 70%, 100% { opacity: 0; } }
+.page-curtain { animation: curtain-up .9s cubic-bezier(.76,0,.24,1) forwards; }
+.page-curtain-logo { animation: curtain-logo .9s ease forwards; }
+
+/* Gạch chân chạy từ trái sang khi hover (link kiểu tạp chí) */
+.link-underline { background: linear-gradient(currentColor, currentColor) 0 100% / 0 1px no-repeat; transition: background-size .45s cubic-bezier(.16,1,.3,1); }
+.link-underline:hover, .link-underline[aria-current="true"] { background-size: 100% 1px; }
+
 /* ---- Hiện dần khi cuộn tới (component <Reveal>) ---- */
 .reveal {
   opacity: 0;
@@ -267,12 +277,18 @@
 .dark .ring-amber-200, .dark .ring-emerald-200, .dark .ring-sky-200, .dark .ring-rose-200 { --tw-ring-color: rgb(255 255 255 / 0.12); }
 .dark .border-emerald-200 { border-color: rgb(52 211 153 / 0.3); }
 
+/* Màn hình rất lớn (2K, 4K): phóng nhẹ cỡ chữ gốc -> mọi kích thước rem (chữ, khoảng cách, menu) to theo,
+   tránh cảnh nội dung bé xíu nằm giữa một khoảng trống mênh mông */
+@media (min-width: 1800px) { html { font-size: 17px; } }
+@media (min-width: 2200px) { html { font-size: 18.5px; } }
+@media (min-width: 3000px) { html { font-size: 22px; } }
+
 body {
   @apply bg-cream-50 text-coffee-900 antialiased transition-colors;
 }
 
 @utility btn {
-  @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition
+  @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition
     disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-caramel-500;
 }
 @utility btn-primary { @apply btn bg-coffee-800 text-cream-50 shadow-sm hover:bg-coffee-700; }
@@ -288,7 +304,7 @@ body {
 @utility label { @apply mb-1.5 block text-sm font-medium text-coffee-700; }
 @utility card { @apply rounded-2xl border border-coffee-100/70 bg-surface shadow-[0_1px_3px_rgba(59,42,32,0.06)]; }
 @utility chip { @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium; }
-@utility container-page { @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8; }
+@utility container-page { @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 2xl:max-w-[88rem] 2xl:px-10; }
 
 /* Markdown trong khung chat */
 .prose-chat p { @apply mb-1.5 last:mb-0; }

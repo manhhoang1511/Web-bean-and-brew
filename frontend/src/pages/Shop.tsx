@@ -5,6 +5,7 @@ import { api, imageUrl } from '../api/client'
 import type { Category, Page, Product } from '../api/types'
 import ProductCard, { ProductCardSkeleton } from '../components/ProductCard'
 import { EmptyState, Pagination } from '../components/ui'
+import PageHero, { HeroStat } from '../components/PageHero'
 import { formatShortVND } from '../lib/format'
 import { useDocumentTitle } from '../lib/hooks'
 
@@ -47,14 +48,14 @@ function Filters({ params, update }: {
     <div className="space-y-8">
       {/* Danh mục đã chuyển lên hàng nút lọc nhanh phía trên */}
       <div>
-        <h3 className="mb-3 text-xs font-bold uppercase tracking-widest text-coffee-400">Khoảng giá</h3>
+        <h3 className="mb-4 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.25em] text-coffee-400"><span className="h-px w-6 bg-coffee-300" /> Khoảng giá</h3>
         <div className="grid grid-cols-2 gap-2">
           {PRICE_PRESETS.map(([lo, hi]) => {
             const selected = (curMin ?? null) === (lo?.toString() ?? null) && (curMax ?? null) === (hi?.toString() ?? null)
             return (
               <button key={`${lo}-${hi}`}
                 onClick={() => update(selected ? { min_price: null, max_price: null } : { min_price: lo?.toString() ?? null, max_price: hi?.toString() ?? null })}
-                className={`rounded-xl border px-2 py-2 text-xs font-medium transition ${selected ? 'border-caramel-500 bg-caramel-500/10 text-caramel-600' : 'border-coffee-100 hover:border-coffee-300'}`}>
+                className={`rounded-full border px-2 py-2 text-xs font-medium transition ${selected ? 'border-coffee-900 bg-coffee-900 text-cream-50' : 'border-coffee-100 hover:border-coffee-400'}`}>
                 {lo === null ? `Dưới ${formatShortVND(hi!)}` : hi === null ? `Trên ${formatShortVND(lo)}` : `${formatShortVND(lo)} – ${formatShortVND(hi)}`}
               </button>
             )
@@ -69,7 +70,7 @@ function Filters({ params, update }: {
         </form>
       </div>
 
-      <label className="flex cursor-pointer items-center justify-between rounded-xl border border-coffee-100 bg-surface px-3 py-2.5 text-sm font-medium">
+      <label className="flex cursor-pointer items-center justify-between rounded-full border border-coffee-100 bg-surface px-4 py-2.5 text-sm font-medium">
         Chỉ hiện còn hàng
         <input type="checkbox" className="h-4 w-4 accent-caramel-500" checked={params.get('in_stock') === 'true'}
           onChange={(e) => update({ in_stock: e.target.checked ? 'true' : null })} />
@@ -113,71 +114,68 @@ export default function Shop() {
     chips.push(['price', `${formatShortVND(+(params.get('min_price') ?? 0))} – ${params.get('max_price') ? formatShortVND(+params.get('max_price')!) : '∞'}`])
   if (params.get('in_stock')) chips.push(['in_stock', 'Còn hàng'])
 
+  const title = q ? ['Kết quả cho', <em key="q">“{q}”</em>]
+    : currentCat ? [currentCat.name] : ['Tất cả', <em key="e">sản phẩm.</em>]
+
   return (
-    <div className="container-page py-8">
-      {/* Banner cửa hàng: ảnh + tiêu đề đổi theo danh mục đang xem */}
-      <div className="relative mb-6 overflow-hidden rounded-[2rem] bg-espresso-900 text-latte-50">
-        <img key={currentCat?.slug ?? 'all'} src={imageUrl(SHOP_BANNERS[currentCat?.slug ?? ''] ?? SHOP_BANNERS[''])} alt=""
-          className="absolute inset-0 h-full w-full object-cover opacity-60 animate-kenburns" />
-        <div className="absolute inset-0 bg-gradient-to-r from-espresso-900/95 via-espresso-900/60 to-transparent" />
-        <div key={`${currentCat?.slug}-${q}`} className="relative px-6 py-10 sm:px-10 sm:py-14">
-          <p className="slide-text text-sm font-semibold uppercase tracking-widest text-caramel-400">
-            {q ? 'Kết quả tìm kiếm' : 'Cửa hàng Bean & Brew'}
-          </p>
-          <h1 className="slide-text mt-2 font-display text-3xl font-bold sm:text-5xl" style={{ animationDelay: '.08s' }}>
-            {q ? `“${q}”` : currentCat ? `${currentCat.icon} ${currentCat.name}` : 'Tất cả sản phẩm'}
-          </h1>
-          <p className="slide-text mt-2 max-w-lg text-latte-200" style={{ animationDelay: '.16s' }}>
-            {currentCat?.description ?? 'Cà phê, trà, đồ uống pha chế và mọi thứ cho tách cà phê hoàn hảo – chọn món và thêm vào giỏ ngay.'}
-          </p>
+    <div>
+      <PageHero
+        kicker={q ? 'Tìm kiếm' : 'Cửa hàng Bean & Brew'}
+        title={title}
+        subtitle={currentCat?.description ?? (q ? undefined : 'Cà phê, trà, đồ uống pha chế và mọi thứ cho tách cà phê hoàn hảo – chọn món và thêm vào giỏ ngay.')}
+        image={imageUrl(SHOP_BANNERS[currentCat?.slug ?? ''] ?? SHOP_BANNERS[''])}
+        aside={<HeroStat value={data ? data.total : '—'} label="sản phẩm" />}
+        crumbs={currentCat ? [{ label: 'Cửa hàng', to: '/shop' }, { label: currentCat.name }] : [{ label: 'Cửa hàng' }]}
+      />
+
+      {/* Thanh danh mục dính dưới header khi cuộn – dạng chữ gạch chân kiểu tạp chí */}
+      <div className="sticky top-16 z-30 border-b border-coffee-100 bg-cream-50/90 backdrop-blur-lg">
+        <div className="container-page flex items-center gap-4">
+          <div className="scrollbar-thin -mb-px flex flex-1 gap-7 overflow-x-auto">
+            {[{ slug: '', name: 'Tất cả', product_count: categories.reduce((n, c) => n + (c.product_count ?? 0), 0) }, ...categories].map((c) => {
+              const active = (params.get('category') ?? '') === c.slug
+              return (
+                <button key={c.slug || 'all'} onClick={() => update({ category: c.slug || null })}
+                  className={`relative shrink-0 border-b-2 py-4 text-sm font-medium transition ${active ? 'border-caramel-500 text-coffee-900' : 'border-transparent text-coffee-400 hover:text-coffee-800'}`}>
+                  {c.name}<sup className="ml-1 text-[10px] tabular-nums text-coffee-300">{c.product_count}</sup>
+                </button>
+              )
+            })}
+          </div>
+          <button className="btn-outline shrink-0 px-4 py-2 lg:hidden" onClick={() => setShowFilters(true)}><SlidersHorizontal size={15} /> Lọc</button>
+          <select className="input hidden w-auto shrink-0 rounded-full py-2 pr-8 sm:block" value={params.get('sort') ?? 'newest'} onChange={(e) => update({ sort: e.target.value })} aria-label="Sắp xếp">
+            {SORTS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+          </select>
         </div>
       </div>
 
-      {/* Lọc nhanh theo danh mục */}
-      <div className="scrollbar-thin -mx-4 mb-8 flex gap-2 overflow-x-auto px-4 pb-1">
-        {[{ slug: '', name: 'Tất cả', icon: '✨', product_count: categories.reduce((n, c) => n + (c.product_count ?? 0), 0) }, ...categories].map((c) => {
-          const active = (params.get('category') ?? '') === c.slug
-          return (
-            <button key={c.slug || 'all'} onClick={() => update({ category: c.slug || null })}
-              className={`flex shrink-0 items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition duration-300 active:scale-95 ${
-                active ? 'border-coffee-800 bg-coffee-800 text-cream-50 shadow-md' : 'border-coffee-100 bg-surface hover:-translate-y-0.5 hover:border-coffee-300'}`}>
-              <span>{c.icon}</span> {c.name}
-              <span className={`rounded-full px-1.5 text-xs ${active ? 'bg-white/20' : 'bg-coffee-50 text-coffee-400'}`}>{c.product_count}</span>
-            </button>
-          )
-        })}
-      </div>
-
-      <div className="flex gap-10">
-        <aside className="hidden w-64 shrink-0 lg:block">
-          <div className="sticky top-24"><Filters params={params} update={update} /></div>
+      <div className="container-page flex gap-12 pt-10">
+        <aside className="hidden w-60 shrink-0 lg:block">
+          <div className="sticky top-36"><Filters params={params} update={update} /></div>
         </aside>
 
         <div className="min-w-0 flex-1">
-          <div className="mb-6 flex flex-wrap items-center gap-3">
-            <button className="btn-outline lg:hidden" onClick={() => setShowFilters(true)}><SlidersHorizontal size={16} /> Bộ lọc</button>
-            <p className="text-sm text-coffee-500">{data ? <><b className="text-coffee-900">{data.total}</b> sản phẩm</> : '…'}</p>
-            <div className="flex flex-wrap gap-2">
-              {chips.map(([key, label]) => (
-                <button key={key} className="chip bg-coffee-100 py-1 text-coffee-700 hover:bg-coffee-200"
-                  onClick={() => update(key === 'price' ? { min_price: null, max_price: null } : { [key]: null })}>
-                  {label} <X size={12} />
-                </button>
-              ))}
-            </div>
-            <select className="input ml-auto w-auto py-2 pr-8" value={params.get('sort') ?? 'newest'} onChange={(e) => update({ sort: e.target.value })}>
+          <div className="mb-8 flex flex-wrap items-center gap-2">
+            <p className="mr-2 text-sm text-coffee-500">{data ? <>Hiển thị <b className="text-coffee-900">{data.items.length}</b> / {data.total}</> : '…'}</p>
+            {chips.map(([key, label]) => (
+              <button key={key} className="chip border border-coffee-200 py-1 text-coffee-700 transition hover:border-rose-300 hover:text-rose-600"
+                onClick={() => update(key === 'price' ? { min_price: null, max_price: null } : { [key]: null })}>
+                {label} <X size={12} />
+              </button>
+            ))}
+            <select className="input ml-auto w-auto rounded-full py-2 pr-8 sm:hidden" value={params.get('sort') ?? 'newest'} onChange={(e) => update({ sort: e.target.value })} aria-label="Sắp xếp">
               {SORTS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
             </select>
           </div>
 
           {loading && !data ? (
-            <div className="grid grid-cols-2 gap-4 sm:gap-6 xl:grid-cols-3">{Array.from({ length: 6 }, (_, i) => <ProductCardSkeleton key={i} />)}</div>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-10 sm:gap-x-6 xl:grid-cols-3">{Array.from({ length: 6 }, (_, i) => <ProductCardSkeleton key={i} />)}</div>
           ) : data && data.items.length > 0 ? (
             <>
-              <div className={`grid grid-cols-2 gap-4 transition sm:gap-6 xl:grid-cols-3 ${loading ? 'opacity-50' : ''}`}>
+              <div className={`grid grid-cols-2 gap-x-4 gap-y-10 transition sm:gap-x-6 sm:gap-y-12 xl:grid-cols-3 ${loading ? 'opacity-50' : ''}`}>
                 {data.items.map((p, i) => <ProductCard key={p.id} product={p} index={i} />)}
               </div>
-              <div className="mt-10">
+              <div className="mt-16">
                 <Pagination page={data.page} pages={data.pages} onChange={(p) => { update({ page: String(p) }); window.scrollTo({ top: 0, behavior: 'smooth' }) }} />
               </div>
             </>

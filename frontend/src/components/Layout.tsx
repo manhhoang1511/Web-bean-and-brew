@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { ChevronDown, Heart, LayoutDashboard, LogOut, Mail, MapPin, Menu, Package, Phone, Search, ShoppingBag, User as UserIcon, X } from 'lucide-react'
+import { ArrowUpRight, ChevronDown, Clock, Heart, LayoutDashboard, LogOut, Mail, MapPin, Menu, Package, Phone, Search, ShoppingBag, User as UserIcon, X } from 'lucide-react'
 import { api, imageUrl } from '../api/client'
 import type { Product } from '../api/types'
 import { useAuth } from '../store/auth'
@@ -146,6 +146,10 @@ function UserMenu({ overlay }: { overlay?: boolean }) {
   )
 }
 
+/** Các trang mở đầu bằng khối tối (trang chủ 3D hoặc <PageHero>) -> header nổi trong suốt phía trên */
+const HERO_ROUTES = /^\/(shop|cart|checkout|orders(\/[^/]+)?|wishlist|profile)?$/
+export const hasHero = (pathname: string) => HERO_ROUTES.test(pathname)
+
 function Header() {
   const count = useCart((s) => cartCount(s.items))
   const user = useAuth((s) => s.user)
@@ -167,8 +171,8 @@ function Header() {
     return () => { clearTimeout(t); window.removeEventListener('scroll', onScroll) }
   }, [pathname])
 
-  const isHome = pathname === '/'
-  const overlay = isHome && overDark
+  const hero = hasHero(pathname)
+  const overlay = hero && overDark
   const scrolled = scrollY > 8
 
   const links: [string, string][] = [
@@ -182,7 +186,7 @@ function Header() {
   return (
     <header className={
       overlay ? 'fixed inset-x-0 top-0 z-40 px-2 pt-2 sm:px-3 sm:pt-3'
-        : `${isHome ? 'fixed inset-x-0 top-0 animate-header-in' : 'sticky top-0'} z-40 border-b bg-cream-50/85 backdrop-blur-lg transition ${scrolled ? 'border-coffee-100 shadow-sm' : 'border-transparent'}`
+        : `fixed inset-x-0 top-0 z-40 border-b bg-cream-50/85 backdrop-blur-lg transition ${hero ? 'animate-header-in' : ''} ${scrolled ? 'border-coffee-100 shadow-sm' : 'border-transparent'}`
     }>
       <div className={`container-page flex h-16 items-center gap-4 lg:gap-6 ${overlay ? 'sm:h-20' : ''}`}>
         <button className={`-ml-2 rounded-lg p-2 md:hidden ${overlay ? 'text-white' : ''}`} onClick={() => setMobileOpen(true)} aria-label="Menu"><Menu size={22} /></button>
@@ -257,34 +261,51 @@ function Header() {
 }
 
 function Footer() {
+  const linkCls = 'group inline-flex items-center gap-1.5 transition hover:text-caramel-400'
   return (
-    <footer className="mt-20 bg-espresso-900 text-latte-200">
-      <div className="container-page grid gap-10 py-14 md:grid-cols-4">
-        <div className="md:col-span-2">
-          <Logo light />
-          <p className="mt-4 max-w-sm text-sm leading-relaxed text-latte-300">
-            Rang xay thủ công mỗi tuần từ những nông trại tốt nhất Tây Nguyên và thế giới. Giao tận nơi, giữ trọn hương vị.
-          </p>
+    <footer className="relative isolate mt-28 overflow-hidden bg-espresso-900 text-latte-200">
+      <div className="grain pointer-events-none absolute inset-0" aria-hidden />
+      <div className="pointer-events-none absolute -right-40 -top-40 -z-10 h-[60vh] w-[60vh] rounded-full bg-caramel-500/10 blur-[120px]" />
+      <div className="container-page pt-20">
+        <div className="grid gap-12 border-b border-white/10 pb-16 lg:grid-cols-12">
+          <div className="lg:col-span-6">
+            <p className="flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.35em] text-caramel-400"><span className="h-px w-10 bg-caramel-400" /> Ghé Bean & Brew</p>
+            <h2 className="mt-5 font-display text-[clamp(2.4rem,4.4vw,4.5rem)] font-semibold leading-[1.02] tracking-tight text-latte-50">
+              Một tách. <em className="font-normal italic text-caramel-400">Đúng gu</em> bạn.
+            </h2>
+            <p className="mt-5 max-w-md text-sm leading-relaxed text-latte-300">
+              Rang xay thủ công mỗi tuần từ những nông trại tốt nhất Tây Nguyên và thế giới. Giao tận nơi, giữ trọn hương vị.
+            </p>
+            <Link to="/shop" className="mt-8 inline-flex items-center gap-2 rounded-full bg-latte-50 px-7 py-3.5 text-sm font-semibold text-espresso-900 transition hover:bg-caramel-400">
+              Vào cửa hàng <ArrowUpRight size={17} />
+            </Link>
+          </div>
+          <div className="lg:col-span-3">
+            <h4 className="mb-5 text-[11px] font-semibold uppercase tracking-[0.3em] text-latte-400">Khám phá</h4>
+            <ul className="space-y-3 font-display text-xl text-latte-50">
+              {[['/shop?category=ca-phe-hat', 'Cà phê hạt'], ['/shop?category=do-uong-pha-che', 'Đồ uống pha chế'], ['/shop?category=dung-cu-pha-che', 'Dụng cụ pha chế'], ['/shop?sort=bestseller', 'Bán chạy nhất']].map(([to, label]) => (
+                <li key={to}><Link to={to} className={linkCls}>{label} <ArrowUpRight size={16} className="opacity-0 transition group-hover:opacity-100" /></Link></li>
+              ))}
+            </ul>
+          </div>
+          <div className="lg:col-span-3">
+            <h4 className="mb-5 text-[11px] font-semibold uppercase tracking-[0.3em] text-latte-400">Liên hệ</h4>
+            <ul className="space-y-3 text-sm">
+              <li className="flex items-center gap-2.5"><MapPin size={15} className="text-caramel-400" /> 123 Lê Lợi, Q.1, TP.HCM</li>
+              <li className="flex items-center gap-2.5"><Phone size={15} className="text-caramel-400" /> 1900 1234</li>
+              <li className="flex items-center gap-2.5"><Mail size={15} className="text-caramel-400" /> hello@beanbrew.vn</li>
+              <li className="flex items-center gap-2.5"><Clock size={15} className="text-caramel-400" /> 7:00 – 22:00 mỗi ngày</li>
+            </ul>
+          </div>
         </div>
-        <div>
-          <h4 className="mb-3 font-semibold text-latte-50">Khám phá</h4>
-          <ul className="space-y-2 text-sm">
-            <li><Link to="/shop?category=ca-phe-hat" className="hover:text-caramel-400">Cà phê hạt</Link></li>
-            <li><Link to="/shop?category=dung-cu-pha-che" className="hover:text-caramel-400">Dụng cụ pha chế</Link></li>
-            <li><Link to="/shop?sort=bestseller" className="hover:text-caramel-400">Bán chạy nhất</Link></li>
-          </ul>
+        {/* Chữ thương hiệu khổng lồ mờ – điểm nhấn kiểu Aristide Benoist */}
+        <p aria-hidden className="select-none overflow-hidden whitespace-nowrap pt-8 text-center font-display text-[clamp(3.5rem,14.5vw,15rem)] font-semibold leading-[0.85] tracking-tighter text-white/[0.06]">
+          Bean <span className="italic">&</span> Brew
+        </p>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 py-6 text-xs text-latte-400">
+          <span>© {new Date().getFullYear()} Bean & Brew · Đồ án Vibe Coding – Hệ thống bán hàng</span>
+          <span>Rang tại Đà Lạt · Giao toàn quốc</span>
         </div>
-        <div>
-          <h4 className="mb-3 font-semibold text-latte-50">Liên hệ</h4>
-          <ul className="space-y-2 text-sm">
-            <li className="flex items-center gap-2"><MapPin size={15} /> 123 Lê Lợi, Q.1, TP.HCM</li>
-            <li className="flex items-center gap-2"><Phone size={15} /> 1900 1234</li>
-            <li className="flex items-center gap-2"><Mail size={15} /> hello@beanbrew.vn</li>
-          </ul>
-        </div>
-      </div>
-      <div className="border-t border-white/10 py-5 text-center text-xs text-latte-400">
-        © {new Date().getFullYear()} Bean & Brew · Đồ án Vibe Coding – Hệ thống bán hàng
       </div>
     </footer>
   )
@@ -304,6 +325,26 @@ function ScrollProgress() {
     return () => { window.removeEventListener('scroll', on); window.removeEventListener('resize', on) }
   }, [])
   return <div ref={ref} className="scroll-progress fixed inset-x-0 top-0 z-[60] h-[3px] bg-gradient-to-r from-caramel-400 via-caramel-500 to-rose-400" aria-hidden />
+}
+
+/**
+ * Màn chuyển trang kiểu Dogstudio: tấm nền espresso kéo lên che rồi mở ra trang mới.
+ * Bỏ qua lần tải đầu (đã có Preloader).
+ */
+function PageCurtain() {
+  const { pathname } = useLocation()
+  const first = useRef(true)
+  const [n, setN] = useState(0)
+  useEffect(() => {
+    if (first.current) { first.current = false; return }
+    setN((v) => v + 1)
+  }, [pathname])
+  if (!n) return null
+  return (
+    <div key={n} className="page-curtain pointer-events-none fixed inset-0 z-[70] flex items-center justify-center bg-espresso-900" aria-hidden>
+      <span className="page-curtain-logo font-display text-3xl font-semibold text-latte-50">Bean <span className="italic text-caramel-400">&</span> Brew</span>
+    </div>
+  )
 }
 
 export default function Layout() {
@@ -330,8 +371,10 @@ export default function Layout() {
           <feDisplacementMap in="SourceGraphic" scale="24" />
         </filter>
       </svg>
+      <PageCurtain />
       <Header />
-      <main className="flex-1">
+      {/* Header luôn cố định; trang không có khối tối ở đầu thì chừa chỗ cho nó */}
+      <main className={`flex-1 ${hasHero(pathname) ? '' : 'pt-16'}`}>
         {/* key đổi theo đường dẫn -> mỗi lần chuyển trang chạy lại hiệu ứng xuất hiện */}
         <div key={pathname} className="animate-page"><Outlet /></div>
       </main>

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
-import { BadgeCheck, ChevronRight, MessageSquare, ShieldCheck, ShoppingBag, Truck, Zap } from 'lucide-react'
+import { BadgeCheck, MessageSquare, ShieldCheck, ShoppingBag, Truck, Zap } from 'lucide-react'
 import { api, errorMessage, imageUrl } from '../api/client'
 import type { CartTopping, Product, Review } from '../api/types'
 import ProductCard, { HeartButton, addToCartWithToast, defaultVariant } from '../components/ProductCard'
@@ -13,6 +13,24 @@ import { useAuth } from '../store/auth'
 import { useCart } from '../store/cart'
 import { discountPercent, formatDate, formatVND } from '../lib/format'
 import { useDocumentTitle } from '../lib/hooks'
+import { SectionHeader } from '../components/home/HomeSections'
+
+/** Ảnh lớn có "kính lúp": rê chuột -> phóng to đúng vị trí con trỏ (đổi transform-origin) */
+function Magnifier({ src, alt, children }: { src: string; alt: string; children?: React.ReactNode }) {
+  const [origin, setOrigin] = useState<string | null>(null)
+  return (
+    <div className="relative aspect-[4/5] flex-1 cursor-zoom-in overflow-hidden rounded-[2rem] bg-cream-100"
+      onMouseMove={(e) => {
+        const r = e.currentTarget.getBoundingClientRect()
+        setOrigin(`${((e.clientX - r.left) / r.width) * 100}% ${((e.clientY - r.top) / r.height) * 100}%`)
+      }}
+      onMouseLeave={() => setOrigin(null)}>
+      <img src={src} alt={alt} className="h-full w-full object-cover transition-transform duration-300 ease-out animate-fade-in"
+        style={{ transformOrigin: origin ?? '50% 50%', transform: origin ? 'scale(1.8)' : 'none' }} />
+      {children}
+    </div>
+  )
+}
 
 function ReviewSection({ product, onRated }: { product: Product; onRated: () => void }) {
   const user = useAuth((s) => s.user)
@@ -54,13 +72,13 @@ function ReviewSection({ product, onRated }: { product: Product; onRated: () => 
   const dist = [5, 4, 3, 2, 1].map((s) => [s, reviews.filter((r) => r.rating === s).length])
 
   return (
-    <section className="mt-16" id="reviews">
-      <h2 className="font-display text-2xl font-bold">Đánh giá từ khách hàng</h2>
-      <div className="mt-6 grid gap-8 lg:grid-cols-3">
+    <section className="mt-28 scroll-mt-24" id="reviews">
+      <SectionHeader eyebrow="Đánh giá" title="Khách hàng nói gì" />
+      <div className="grid gap-8 lg:grid-cols-3">
         <div className="space-y-6">
           <div className="card p-6">
             <div className="flex items-center gap-4">
-              <p className="font-display text-5xl font-bold">{product.rating_avg.toFixed(1)}</p>
+              <p className="font-display text-6xl font-semibold">{product.rating_avg.toFixed(1)}</p>
               <div>
                 <Stars value={product.rating_avg} size={18} />
                 <p className="mt-1 text-sm text-coffee-400">{product.rating_count} đánh giá</p>
@@ -102,9 +120,9 @@ function ReviewSection({ product, onRated }: { product: Product; onRated: () => 
           {reviews.length === 0 ? (
             <div className="card"><EmptyState icon={<MessageSquare size={28} />} title="Chưa có đánh giá" desc="Hãy là người đầu tiên đánh giá sản phẩm này!" /></div>
           ) : (
-            <div className="space-y-4">
+            <div className="divide-y divide-coffee-100 border-y border-coffee-100">
               {reviews.map((r) => (
-                <div key={r.id} className="card p-5">
+                <div key={r.id} className="py-6">
                   <div className="flex items-start gap-3">
                     <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-coffee-100 font-semibold text-coffee-700">
                       {r.user.full_name.charAt(0)}
@@ -120,7 +138,7 @@ function ReviewSection({ product, onRated }: { product: Product; onRated: () => 
                         <Stars value={r.rating} size={13} />
                         <span className="text-xs text-coffee-300">{formatDate(r.created_at, false)}</span>
                       </div>
-                      {r.comment && <p className="mt-2 text-sm leading-relaxed text-coffee-700">{r.comment}</p>}
+                      {r.comment && <p className="mt-3 font-display text-lg leading-relaxed text-coffee-800">“{r.comment}”</p>}
                     </div>
                   </div>
                 </div>
@@ -184,80 +202,82 @@ export default function ProductDetail() {
   const stock = variant?.stock ?? product.stock
   const off = discountPercent(price, originalPrice)
   const chip = (selected: boolean, disabled = false) =>
-    `rounded-xl border-2 px-4 py-2 text-sm font-medium transition ${selected ? 'border-caramel-500 bg-caramel-500/10 text-coffee-900'
-      : disabled ? 'cursor-not-allowed border-dashed border-coffee-100 text-coffee-300 line-through' : 'border-coffee-100 hover:border-coffee-300'}`
+    `rounded-full border px-4 py-2 text-sm font-medium transition ${selected ? 'border-coffee-900 bg-coffee-900 text-cream-50'
+      : disabled ? 'cursor-not-allowed border-dashed border-coffee-100 text-coffee-300 line-through' : 'border-coffee-200 hover:border-coffee-500'}`
   const specs = [
     ['Xuất xứ', product.origin], ['Mức rang', product.roast_level], [product.is_drink ? 'Kích cỡ' : 'Khối lượng', product.weight], ['Danh mục', product.category?.name],
   ].filter(([, v]) => v)
 
   return (
-    <div className="container-page py-8">
-      <nav className="mb-6 flex items-center gap-1.5 text-sm text-coffee-400">
-        <Link to="/" className="hover:text-coffee-700">Trang chủ</Link><ChevronRight size={14} />
-        <Link to="/shop" className="hover:text-coffee-700">Cửa hàng</Link><ChevronRight size={14} />
-        {product.category && <><Link to={`/shop?category=${product.category.slug}`} className="hover:text-coffee-700">{product.category.name}</Link><ChevronRight size={14} /></>}
-        <span className="truncate text-coffee-700">{product.name}</span>
+    <div className="container-page pb-8 pt-8">
+      <nav aria-label="Đường dẫn" className="mb-8 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] font-medium uppercase tracking-[0.22em] text-coffee-400">
+        <Link to="/" className="hover:text-caramel-600">Trang chủ</Link><span>/</span>
+        <Link to="/shop" className="hover:text-caramel-600">Cửa hàng</Link><span>/</span>
+        {product.category && <><Link to={`/shop?category=${product.category.slug}`} className="hover:text-caramel-600">{product.category.name}</Link><span>/</span></>}
+        <span className="truncate text-coffee-800">{product.name}</span>
       </nav>
 
-      <div className="grid gap-10 lg:grid-cols-2 [&>*]:min-w-0">
-        <div>
-          <div className="card relative aspect-square overflow-hidden">
-            <img src={imageUrl(product.gallery[activeImg] ?? product.image_url)} alt={product.name} className="h-full w-full object-cover animate-fade-in" key={activeImg} />
-            {off > 0 && <span className="chip absolute left-4 top-4 bg-rose-500 px-3 py-1 text-sm text-white">-{off}%</span>}
+      <div className="grid gap-10 lg:grid-cols-12 lg:gap-16 [&>*]:min-w-0">
+        {/* Ảnh lớn dính khi cuộn phần thông tin; rê chuột để soi chi tiết (kính lúp) */}
+        <div className="lg:col-span-7">
+          <div className="lg:sticky lg:top-24 lg:flex lg:flex-row-reverse lg:gap-4">
+            <Magnifier src={imageUrl(product.gallery[activeImg] ?? product.image_url)} alt={product.name} key={activeImg}>
+              {off > 0 && <span className="chip absolute left-5 top-5 bg-caramel-500 px-3 py-1 text-sm font-semibold text-white">-{off}%</span>}
+            </Magnifier>
+            {product.gallery.length > 1 && (
+              <div className="mt-4 flex gap-3 lg:mt-0 lg:flex-col">
+                {product.gallery.map((g, i) => (
+                  <button key={g} onClick={() => setActiveImg(i)} aria-label={`Ảnh ${i + 1}`}
+                    className={`h-20 w-16 overflow-hidden rounded-xl transition lg:h-24 lg:w-20 ${i === activeImg ? 'ring-2 ring-caramel-500 ring-offset-2 ring-offset-cream-50' : 'opacity-60 hover:opacity-100'}`}>
+                    <img src={imageUrl(g)} alt="" className="h-full w-full object-cover" />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
-          {product.gallery.length > 1 && (
-            <div className="mt-4 flex gap-3">
-              {product.gallery.map((g, i) => (
-                <button key={g} onClick={() => setActiveImg(i)}
-                  className={`h-20 w-20 overflow-hidden rounded-xl border-2 transition ${i === activeImg ? 'border-caramel-500' : 'border-transparent opacity-70 hover:opacity-100'}`}>
-                  <img src={imageUrl(g)} alt="" className="h-full w-full object-cover" />
-                </button>
-              ))}
-            </div>
-          )}
         </div>
 
-        <div>
-          <p className="text-sm font-semibold uppercase tracking-widest text-caramel-600">{product.category?.name}</p>
-          <div className="mt-2 flex items-start justify-between gap-4">
-            <h1 className="font-display text-3xl font-bold leading-tight sm:text-4xl">{product.name}</h1>
-            <HeartButton product={product} className="h-11 w-11 shrink-0 border border-coffee-100 bg-surface" />
+        <div className="lg:col-span-5">
+          <p className="flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.3em] text-caramel-600"><span className="h-px w-8 bg-caramel-500" /> {product.category?.name}</p>
+          <div className="mt-4 flex items-start justify-between gap-4">
+            <h1 className="font-display text-[clamp(2.3rem,3.6vw,3.6rem)] font-semibold leading-[1.04] tracking-tight">{product.name}</h1>
+            <HeartButton product={product} className="mt-2 h-12 w-12 shrink-0 border border-coffee-200 bg-surface" />
           </div>
-          <a href="#reviews" className="mt-3 flex items-center gap-2 text-sm text-coffee-500">
-            <Stars value={product.rating_avg} size={16} />
+          <a href="#reviews" className="mt-4 flex items-center gap-2 text-sm text-coffee-500">
+            <Stars value={product.rating_avg} size={15} />
             <span className="font-semibold text-coffee-800">{product.rating_avg.toFixed(1)}</span>
-            <span>({product.rating_count} đánh giá)</span>
-            <span className="text-coffee-200">|</span>
+            <span className="link-underline">{product.rating_count} đánh giá</span>
+            <span className="text-coffee-200">·</span>
             <span>Đã bán {product.sold_count}</span>
           </a>
 
-          <div className="mt-6 flex items-end gap-3">
-            <p key={price} className="text-4xl font-bold text-coffee-900 animate-pop">{formatVND(price)}</p>
-            {off > 0 && <p className="pb-1 text-lg text-coffee-300 line-through">{formatVND(originalPrice!)}</p>}
+          <div className="mt-7 flex items-baseline gap-3">
+            <p key={price} className="font-display text-4xl font-semibold text-coffee-900 animate-pop sm:text-5xl">{formatVND(price)}</p>
+            {off > 0 && <p className="text-lg text-coffee-300 line-through">{formatVND(originalPrice!)}</p>}
           </div>
 
           <p className="mt-6 leading-relaxed text-coffee-600">{product.description}</p>
 
           {specs.length > 0 && (
-            <dl className="mt-6 grid grid-cols-2 gap-3">
+            <dl className="mt-7 divide-y divide-coffee-100 border-y border-coffee-100">
               {specs.map(([k, v]) => (
-                <div key={k} className="rounded-xl bg-cream-100 px-4 py-3">
-                  <dt className="text-xs text-coffee-400">{k}</dt>
-                  <dd className="text-sm font-semibold">{v}</dd>
+                <div key={k} className="flex items-center justify-between gap-4 py-3 text-sm">
+                  <dt className="text-[11px] font-semibold uppercase tracking-[0.2em] text-coffee-400">{k}</dt>
+                  <dd className="text-right font-medium">{v}</dd>
                 </div>
               ))}
             </dl>
           )}
 
-          <div className="mt-8 space-y-5 border-t border-coffee-100 pt-6">
+          <div className="mt-8 space-y-6">
             {product.variants.length > 0 && (
               <div>
-                <p className="mb-2 text-sm font-semibold">{product.is_drink ? 'Size' : 'Khối lượng'}</p>
+                <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.2em] text-coffee-500">{product.is_drink ? 'Size' : 'Khối lượng'}</p>
                 <div className="flex flex-wrap gap-2">
                   {product.variants.map((v) => (
                     <button key={v.id} className={chip(v.id === variantId, v.stock === 0)} disabled={v.stock === 0}
                       onClick={() => { setVariantId(v.id); setQty(1) }} title={v.stock === 0 ? 'Hết hàng' : formatVND(v.price)}>
-                      {v.label} <span className="ml-1 text-xs text-coffee-400">{formatVND(v.price)}</span>
+                      {v.label} <span className="ml-1 text-xs opacity-60">{formatVND(v.price)}</span>
                     </button>
                   ))}
                 </div>
@@ -269,7 +289,7 @@ export default function ProductDetail() {
             )}
             {product.has_grind_option && (
               <div>
-                <p className="mb-2 text-sm font-semibold">Kiểu xay</p>
+                <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.2em] text-coffee-500">Kiểu xay</p>
                 <div className="flex flex-wrap gap-2">
                   {grind_options.map((g) => (
                     <button key={g} className={chip(g === grind)} onClick={() => setGrind(g)}>{g}</button>
@@ -285,7 +305,7 @@ export default function ProductDetail() {
               ) : <span className="font-semibold text-rose-600">● Tạm hết hàng</span>}
             </p>
             {stock > 0 && product.is_drink && (
-              <div className="flex items-center justify-between gap-3 rounded-xl bg-espresso-800 px-4 py-3 text-sm text-latte-100 animate-fade-in">
+              <div className="flex items-center justify-between gap-3 rounded-2xl bg-espresso-900 px-5 py-3.5 text-sm text-latte-100 animate-fade-in">
                 <span className="min-w-0 truncate">☕ {optionsLabel(options)}</span>
                 <span className="shrink-0 font-semibold text-latte-50">
                   {qty > 1 && <span className="mr-1 font-normal text-latte-300">{formatVND(price)} × {qty} =</span>}
@@ -296,19 +316,19 @@ export default function ProductDetail() {
             {stock > 0 && (
               <div className="flex flex-wrap gap-3">
                 <QuantityInput value={Math.min(qty, stock)} max={stock} onChange={setQty} />
-                <button className="btn-outline h-11 flex-1 px-6" onClick={(e) => addToCartWithToast(add, product, qty, options, e.currentTarget)}>
+                <button className="btn-outline h-12 min-w-[10rem] flex-1 whitespace-nowrap px-6" onClick={(e) => addToCartWithToast(add, product, qty, options, e.currentTarget)}>
                   <ShoppingBag size={18} /> Thêm vào giỏ
                 </button>
-                <button className="btn-accent shine h-11 flex-1 px-6" onClick={() => { add(product, qty, options); navigate('/cart') }}>
+                <button className="btn-primary shine h-12 min-w-[10rem] flex-1 whitespace-nowrap px-6" onClick={() => { add(product, qty, options); navigate('/cart') }}>
                   <Zap size={18} /> Mua ngay
                 </button>
               </div>
             )}
           </div>
 
-          <div className="mt-6 grid gap-3 sm:grid-cols-2">
-            <div className="flex items-center gap-3 rounded-xl border border-coffee-100 p-3 text-sm"><Truck size={20} className="text-caramel-600" /> Miễn phí ship đơn từ {formatVND(free_shipping_threshold)}</div>
-            <div className="flex items-center gap-3 rounded-xl border border-coffee-100 p-3 text-sm"><ShieldCheck size={20} className="text-caramel-600" /> Đổi trả trong 7 ngày</div>
+          <div className="mt-8 flex flex-wrap gap-x-8 gap-y-3 border-t border-coffee-100 pt-6 text-sm text-coffee-600">
+            <div className="flex items-center gap-3"><Truck size={18} className="text-caramel-600" /> Miễn phí ship đơn từ {formatVND(free_shipping_threshold)}</div>
+            <div className="flex items-center gap-3"><ShieldCheck size={18} className="text-caramel-600" /> Đổi trả trong 7 ngày</div>
           </div>
         </div>
       </div>
@@ -316,9 +336,9 @@ export default function ProductDetail() {
       <ReviewSection product={product} onRated={load} />
 
       {related.length > 0 && (
-        <section className="mt-16">
-          <h2 className="mb-6 font-display text-2xl font-bold">Có thể bạn cũng thích</h2>
-          <div className="grid grid-cols-2 gap-4 sm:gap-6 lg:grid-cols-4">
+        <section className="mt-28">
+          <SectionHeader eyebrow="Gợi ý" title="Có thể bạn cũng thích" link={product.category ? `/shop?category=${product.category.slug}` : '/shop'} />
+          <div className="grid grid-cols-2 gap-x-4 gap-y-10 sm:gap-x-6 lg:grid-cols-4">
             {related.map((p, i) => <ProductCard key={p.id} product={p} index={i} />)}
           </div>
         </section>

@@ -92,6 +92,21 @@ Quyết định: lấy **Dogstudio** làm xương sống (vật thể 3D + kể 
 | Lỗi TS1294 | `tsc` | `erasableSyntaxOnly` cấm `constructor(private x)` | Khai báo thuộc tính tường minh |
 | Chữ khó đọc trên mobile | Ảnh chụp 390px | Tách nằm sau chữ | Mobile đưa tách lên nửa trên |
 
+### Vòng 7 – "Sửa trang chủ 3D và làm các trang khác đẹp đồng bộ"
+
+Tự đánh giá ảnh chụp trang chủ của người dùng (màn 2550px) trước khi sửa, rồi làm lại toàn bộ trang khách hàng theo cùng ngôn ngữ thiết kế.
+
+| Vấn đề | Phát hiện bằng | Nguyên nhân | Sửa |
+|---|---|---|---|
+| 90 hạt cà phê to, phủ kín màn hình, che tách và chữ | Ảnh người dùng gửi | Rải ngẫu nhiên không ràng buộc | Còn ~28 hạt nhỏ, rải có loại trừ (không trước tách, không vùng chữ) + sương mù tạo chiều sâu |
+| Tách trông như cái bát, không thấy latte | Ảnh chụp | Tách quay tròn liên tục (quai lúc khuất), camera ngang miệng tách | Quai luôn hướng ra ngoài, camera chếch xuống |
+| Khói như chấm rơi | Ảnh chụp | `Points` rời rạc | Dải mặt phẳng + nhiễu fbm trong shader |
+| Latte art giống miếng pizza | Ảnh chụp chương 3 | Hình vẽ cánh tulip lệch tỉ lệ | Vẽ lại trái tim nhiều lớp |
+| "thủ công" bị tách 2 dòng, chữ đè lên đĩa trên màn rộng | Ảnh 2550px | `max-w` cố định + cỡ chữ theo breakpoint | Mỗi dòng `nowrap`, cỡ chữ `clamp()` theo `vw`, tách đẩy xa theo tỉ lệ khung hình |
+| Màn hình lớn nội dung bé, trống 2 bên | Ảnh 2550px | Khung 1280px cố định | Phóng `font-size` gốc ở ≥1800px, khung rộng hơn ở `2xl` |
+| Các trang khác "phẳng", lệch phong cách trang chủ | Người dùng yêu cầu | Mỗi trang tự dựng tiêu đề | `<PageHero>` dùng chung, thẻ sản phẩm/footer/giỏ/thanh toán làm lại |
+| Nút "Thêm vào giỏ" bị xuống 2 dòng | Ảnh chụp 1440px | Cột thông tin hẹp | `whitespace-nowrap` + `min-w` |
+
 ## 4. Lịch sử Git
 Mỗi giai đoạn là một commit riêng (`git log --oneline`): MVP → sửa ảnh → sửa quy tắc nghiệp vụ → biến thể + wishlist → nâng cấp chatbot → admin/UX → tài liệu. Thông điệp commit ghi rõ *làm gì và vì sao*, có thể dùng khi trình bày quy trình.
 
