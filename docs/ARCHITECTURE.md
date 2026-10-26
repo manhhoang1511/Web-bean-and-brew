@@ -230,4 +230,4 @@ AdminLayout: toast + âm báo, badge số đơn chờ; store.version++ → Dashb
 
 **H: Chatbot có bịa sản phẩm không?** – System prompt yêu cầu chỉ dùng sản phẩm trong danh sách, viết đúng tên; thẻ sản phẩm chỉ hiện khi tên khớp với DB nên khách luôn bấm được vào sản phẩm thật.
 
-**H: Làm sao biết code AI sinh ra đúng?** – Bộ `pytest` 19 test kiểm tra các nghiệp vụ cốt lõi (tính tiền, coupon, tồn kho theo phân loại, phân quyền, luồng trạng thái, thanh toán thẻ/QR, chống đánh giá ảo, wishlist, đặt lại mật khẩu, xuất CSV, chatbot offline và streaming) + chạy thử bằng trình duyệt tự động + thử chatbot với Gemini thật.
+**H: Làm sao biết code AI sinh ra đúng?** – Bộ `pytest` 22 test kiểm tra các nghiệp vụ cốt lõi (tính tiền, coupon, tồn kho theo phân loại, phân quyền, luồng trạng thái, thanh toán thẻ/QR, chống đánh giá ảo, wishlist, đặt lại mật khẩu, xuất CSV, chatbot offline và streaming) + chạy thử bằng trình duyệt tự động + thử chatbot với Gemini thật.

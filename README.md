@@ -122,7 +122,7 @@ cd backend && .venv\Scripts\python -m pytest -q
 8. 22 test pytest; lịch sử Git ghi lại từng giai đoạn làm việc với AI
 9. **Chạy được khi không có mạng**: ảnh, video, phông chữ, mã QR đều nằm trong dự án; chatbot tự chuyển sang chế độ trả lời offline (chỉ phần gọi Gemini/OpenAI cần Internet)
 
-📖 Tài liệu thêm: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) (kiến trúc, luồng dữ liệu, câu hỏi vấn đáp), [docs/VIBE_CODING.md](docs/VIBE_CODING.md) (quy trình làm việc với AI và các lỗi đã phát hiện).
+📖 Tài liệu thêm: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) (kiến trúc, luồng dữ liệu, câu hỏi vấn đáp), [docs/VIBE_CODING.md](docs/VIBE_CODING.md) (quy trình làm việc với AI và các lỗi đã phát hiện), [docs/THUYET_TRINH.md](docs/THUYET_TRINH.md) (kịch bản demo, câu hỏi vấn đáp, xử lý sự cố khi thuyết trình).
 
 ## 📁 Cấu trúc thư mục
 ```
