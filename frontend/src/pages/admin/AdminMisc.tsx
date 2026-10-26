@@ -54,7 +54,7 @@ export function AdminCategories() {
   if (!items) return <PageLoader />
   return (
     <>
-      <AdminPageHeader title="Danh mục" desc={`${items.length} danh mục`}
+      <AdminPageHeader kicker="Thực đơn" title="Danh mục" desc={`${items.length} danh mục`}
         action={<button className="btn-primary" onClick={() => setEditing({ id: null, name: '', description: '', icon: '☕' })}><Plus size={18} /> Thêm danh mục</button>} />
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {items.map((c) => (
@@ -109,7 +109,7 @@ export function AdminCustomers() {
 
   return (
     <>
-      <AdminPageHeader title="Khách hàng" desc={`${items.length} khách hàng · Tổng chi tiêu ${formatVND(items.reduce((s, c) => s + c.total_spent, 0))}`} />
+      <AdminPageHeader kicker="Bán hàng" title="Khách hàng" desc={`${items.length} khách hàng · Tổng chi tiêu ${formatVND(items.reduce((s, c) => s + c.total_spent, 0))}`} />
       <div className="card overflow-hidden">
         <div className="border-b border-coffee-50 p-4">
           <div className="relative max-w-xs">
@@ -164,7 +164,7 @@ export function AdminCoupons() {
   if (!items) return <PageLoader />
   return (
     <>
-      <AdminPageHeader title="Mã giảm giá" desc="Khách nhập mã ở bước thanh toán; chatbot cũng tự giới thiệu các mã đang bật." />
+      <AdminPageHeader kicker="Khuyến mãi" title="Mã giảm giá" desc="Khách nhập mã ở bước thanh toán; chatbot cũng tự giới thiệu các mã đang bật." />
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {items.map((c) => (
           <div key={c.id} className={`card relative overflow-hidden p-5 ${!c.is_active ? 'opacity-60' : ''}`}>

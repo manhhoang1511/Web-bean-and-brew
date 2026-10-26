@@ -272,7 +272,7 @@ export default function AdminProducts() {
 
   return (
     <>
-      <AdminPageHeader title="Sản phẩm" desc={data ? `${data.total} sản phẩm` : ''}
+      <AdminPageHeader kicker="Thực đơn" title="Sản phẩm" desc={data ? `${data.total} sản phẩm` : ''}
         action={<button className="btn-primary" onClick={() => setEditing({ id: null, form: EMPTY })}><Plus size={18} /> Thêm sản phẩm</button>} />
 
       <div className="card mb-4 flex flex-wrap gap-3 p-4">

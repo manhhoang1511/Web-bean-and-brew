@@ -56,7 +56,7 @@ export default function AdminOrders() {
   const [params, setParams] = useSearchParams()
   const status = (params.get('status') ?? '') as OrderStatus | ''
   const [data, setData] = useState<Page<Order> | null>(null)
-  const [q, setQ] = useState('')
+  const [q, setQ] = useState(params.get('q') ?? '') // ?q= từ trang tổng quan (bấm mã đơn)
   const [page, setPage] = useState(1)
   const [viewing, setViewing] = useState<Order | null>(null)
   const dq = useDebounce(q, 300)
@@ -77,7 +77,7 @@ export default function AdminOrders() {
 
   return (
     <>
-      <AdminPageHeader title="Đơn hàng" desc={data ? `${data.total} đơn hàng` : ''} action={<ExportOrdersButton status={status} />} />
+      <AdminPageHeader kicker="Bán hàng" title="Đơn hàng" desc={data ? `${data.total} đơn hàng` : ''} action={<ExportOrdersButton status={status} />} />
 
       <div className="card mb-4 p-4">
         <div className="flex flex-wrap items-center gap-3">

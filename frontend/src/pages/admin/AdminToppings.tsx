@@ -65,7 +65,7 @@ export default function AdminToppings() {
   if (!items) return <PageLoader />
   return (
     <>
-      <AdminPageHeader title="Topping" desc="Áp dụng cho đồ uống bật “Cho thêm topping”. Giá cộng thêm vào mỗi ly."
+      <AdminPageHeader kicker="Thực đơn" title="Topping" desc="Áp dụng cho đồ uống bật “Cho thêm topping”. Giá cộng thêm vào mỗi ly."
         action={<button className="btn-primary" onClick={() => setEditing({ id: null, name: '', price: '', is_active: true })}><Plus size={18} /> Thêm topping</button>} />
       <div className="card overflow-hidden">
         <table className="w-full text-sm">
