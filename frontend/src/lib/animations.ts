@@ -44,6 +44,85 @@ export function flyToCart(sourceEl: HTMLElement | null | undefined, image: strin
   }
 }
 
+/**
+ * Parallax theo chuột + cuộn trang: ghi biến CSS --mx, --my (-1..1) và --sy (px đã cuộn) lên phần tử.
+ * Ghi thẳng vào style (không setState) nên không re-render React, mượt 60fps.
+ */
+export function useParallax<T extends HTMLElement>() {
+  const ref = useRef<T>(null)
+  useEffect(() => {
+    const el = ref.current
+    if (!el || prefersReducedMotion()) return
+    let raf = 0
+    let mx = 0, my = 0, tx = 0, ty = 0
+    const onMove = (e: PointerEvent) => {
+      const r = el.getBoundingClientRect()
+      tx = ((e.clientX - r.left) / r.width) * 2 - 1
+      ty = ((e.clientY - r.top) / r.height) * 2 - 1
+    }
+    const onLeave = () => { tx = 0; ty = 0 }
+    const loop = () => {
+      mx += (tx - mx) * 0.08 // nội suy -> chuyển động có quán tính
+      my += (ty - my) * 0.08
+      el.style.setProperty('--mx', mx.toFixed(4))
+      el.style.setProperty('--my', my.toFixed(4))
+      el.style.setProperty('--sy', `${Math.min(window.scrollY, 1200)}px`)
+      raf = requestAnimationFrame(loop)
+    }
+    el.addEventListener('pointermove', onMove)
+    el.addEventListener('pointerleave', onLeave)
+    raf = requestAnimationFrame(loop)
+    return () => {
+      cancelAnimationFrame(raf)
+      el.removeEventListener('pointermove', onMove)
+      el.removeEventListener('pointerleave', onLeave)
+    }
+  }, [])
+  return ref
+}
+
+/** Nghiêng 3D theo vị trí chuột (cho thẻ sản phẩm). Ghi --rx, --ry, --gx, --gy (vị trí vệt sáng). */
+export function useTilt<T extends HTMLElement>(max = 7) {
+  const ref = useRef<T>(null)
+  useEffect(() => {
+    const el = ref.current
+    if (!el || prefersReducedMotion() || !window.matchMedia('(hover: hover)').matches) return
+    const onMove = (e: PointerEvent) => {
+      const r = el.getBoundingClientRect()
+      const px = (e.clientX - r.left) / r.width, py = (e.clientY - r.top) / r.height
+      el.style.setProperty('--rx', `${(0.5 - py) * max}deg`)
+      el.style.setProperty('--ry', `${(px - 0.5) * max}deg`)
+      el.style.setProperty('--gx', `${px * 100}%`)
+      el.style.setProperty('--gy', `${py * 100}%`)
+    }
+    const onLeave = () => { el.style.setProperty('--rx', '0deg'); el.style.setProperty('--ry', '0deg') }
+    el.addEventListener('pointermove', onMove)
+    el.addEventListener('pointerleave', onLeave)
+    return () => { el.removeEventListener('pointermove', onMove); el.removeEventListener('pointerleave', onLeave) }
+  }, [max])
+  return ref
+}
+
+/** Nút "nam châm": hút nhẹ theo con trỏ khi rê gần */
+export function useMagnetic<T extends HTMLElement>(strength = 0.3) {
+  const ref = useRef<T>(null)
+  useEffect(() => {
+    const el = ref.current
+    if (!el || prefersReducedMotion() || !window.matchMedia('(hover: hover)').matches) return
+    const onMove = (e: PointerEvent) => {
+      const r = el.getBoundingClientRect()
+      const x = e.clientX - (r.left + r.width / 2), y = e.clientY - (r.top + r.height / 2)
+      el.style.transform = `translate(${x * strength}px, ${y * strength}px)`
+    }
+    const onLeave = () => { el.style.transform = '' }
+    el.style.transition = 'transform .35s cubic-bezier(.2,.8,.2,1)'
+    el.addEventListener('pointermove', onMove)
+    el.addEventListener('pointerleave', onLeave)
+    return () => { el.removeEventListener('pointermove', onMove); el.removeEventListener('pointerleave', onLeave) }
+  }, [strength])
+  return ref
+}
+
 /** Trả về ref + cờ `visible` khi phần tử lọt vào màn hình (chỉ kích hoạt 1 lần) */
 export function useInView<T extends HTMLElement>(threshold = 0.15) {
   const ref = useRef<T>(null)

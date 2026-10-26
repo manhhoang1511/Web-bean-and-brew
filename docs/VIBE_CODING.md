@@ -61,6 +61,14 @@ Tài liệu ghi lại cách dự án được xây dựng theo phương pháp "V
 | Khách xin 4 shot espresso, server âm thầm giảm còn 3 | Thử Gemini thật | Kiểm tra đúng nhưng không thông báo | Chatbot nói rõ đã giới hạn 3 phần/loại |
 | Trang đồ uống tràn ngang trên điện thoại | Chụp màn hình 390px + đo `scrollWidth` | Phần tử con của CSS grid mặc định `min-width: auto` | `min-w-0` cho cột và nút mức đá |
 
+### Vòng 4 – "Làm trang chủ động giống ảnh mẫu"
+
+| Lỗi | Phát hiện bằng | Nguyên nhân | Sửa |
+|---|---|---|---|
+| Chữ "CÀ PHÊ" hiện thành "CA PHE" | Ảnh chụp màn hình | `background-clip:text` chỉ tô trong hộp phần tử; `line-height: .85` khiến dấu nằm ngoài hộp → trong suốt | Nới `padding-top` (bù `margin-top` âm) cho từng ký tự |
+| Hero không tự chuyển cảnh trên điện thoại (dự đoán trước) | Đọc lại code | Thẻ có thanh tiến trình bị `display:none` trên mobile → animation không chạy → không có `animationend` | Chấm chỉ báo mobile có thanh tiến trình riêng |
+| Logo xuống 2 dòng trên mobile, nhãn "Nổi bật" bị kéo dài | Ảnh chụp 390px / trang cửa hàng | Thiếu `whitespace-nowrap`; flex dọc mặc định `align-items: stretch` | `whitespace-nowrap`, `items-start` |
+
 ## 4. Lịch sử Git
 Mỗi giai đoạn là một commit riêng (`git log --oneline`): MVP → sửa ảnh → sửa quy tắc nghiệp vụ → biến thể + wishlist → nâng cấp chatbot → admin/UX → tài liệu. Thông điệp commit ghi rõ *làm gì và vì sao*, có thể dùng khi trình bày quy trình.
 

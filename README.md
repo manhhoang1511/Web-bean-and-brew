@@ -83,6 +83,8 @@ cd backend && .venv\Scripts\python -m pytest -q
 - Thanh toán: mã giảm giá; COD / thẻ (kiểm tra Luhn) / **QR có bước xác nhận chuyển khoản**
 - Đơn hàng: lọc theo trạng thái, timeline *Đang xử lý → Đang giao → Đã hoàn thành*, hủy đơn, mua lại
 - **Dark mode** (theo hệ điều hành hoặc tự chọn), responsive mobile
+- **Hero trình chiếu động** (lấy cảm hứng từ thiết kế du lịch): 4 cảnh tự chuyển, chữ khổng lồ chạy từng ký tự, **vật thể đè lên chữ** (giả lập tách nền bằng CSS mask), parallax theo chuột và cuộn, thanh menu kính mờ, thẻ xem trước cảnh tiếp theo có thanh tiến trình, điều khiển bằng phím ←/→
+- Thanh tiến trình cuộn trang, thẻ sản phẩm **nghiêng 3D + vệt sáng** theo chuột, nút "nam châm" hút theo con trỏ
 - **Animation**: hero Ken Burns + chữ hiện lần lượt, số liệu đếm tăng, hạt cà phê bay, băng chữ chạy, các khối hiện dần khi cuộn, ảnh sản phẩm **bay vào giỏ hàng**, chuyển trang mượt; tự tắt khi hệ điều hành bật *giảm chuyển động*
 
 ### Quản trị viên (`/admin`)

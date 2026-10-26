@@ -17,7 +17,7 @@ export function Logo({ light }: { light?: boolean }) {
       <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-espresso-800">
         <svg viewBox="0 0 64 64" className="h-6 w-6"><ellipse cx="32" cy="32" rx="13" ry="18" fill="#d08a3c" transform="rotate(30 32 32)" /><path d="M26 18c8 6 4 22 12 28" stroke="#3b2a20" strokeWidth="3" fill="none" strokeLinecap="round" /></svg>
       </span>
-      <span className={`font-display text-xl font-bold ${light ? 'text-latte-50' : 'text-coffee-900'}`}>
+      <span className={`whitespace-nowrap font-display text-xl font-bold ${light ? 'text-latte-50' : 'text-coffee-900'}`}>
         Bean <span className="text-caramel-500">&</span> Brew
       </span>
     </Link>
@@ -94,7 +94,7 @@ function SearchBox({ onDone }: { onDone?: () => void }) {
   )
 }
 
-function UserMenu() {
+function UserMenu({ overlay }: { overlay?: boolean }) {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
@@ -107,7 +107,7 @@ function UserMenu() {
 
   if (!user) {
     return (
-      <Link to="/login" className="btn-primary hidden rounded-full px-5 sm:inline-flex">
+      <Link to="/login" className={`hidden rounded-full px-5 sm:inline-flex ${overlay ? 'btn bg-white text-espresso-900 hover:bg-caramel-400' : 'btn-primary'}`}>
         Đăng nhập
       </Link>
     )
@@ -115,11 +115,11 @@ function UserMenu() {
   const item = 'flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm hover:bg-coffee-50'
   return (
     <div ref={ref} className="relative">
-      <button onClick={() => setOpen(!open)} className="flex items-center gap-2 rounded-full py-1 pl-1 pr-2 hover:bg-coffee-50">
+      <button onClick={() => setOpen(!open)} className={`flex items-center gap-2 rounded-full py-1 pl-1 pr-2 ${overlay ? 'hover:bg-white/15' : 'hover:bg-coffee-50'}`}>
         <span className="flex h-8 w-8 items-center justify-center rounded-full bg-caramel-500 text-sm font-bold text-white">
           {user.full_name.charAt(0).toUpperCase()}
         </span>
-        <span className="hidden max-w-28 truncate text-sm font-medium lg:block">{user.full_name}</span>
+        <span className={`hidden max-w-28 truncate text-sm font-medium lg:block ${overlay ? 'text-white' : ''}`}>{user.full_name}</span>
         <ChevronDown size={14} className="hidden text-coffee-400 lg:block" />
       </button>
       {open && (
@@ -149,63 +149,94 @@ function Header() {
   const count = useCart((s) => cartCount(s.items))
   const user = useAuth((s) => s.user)
   const wishCount = useWishlist((s) => s.ids.length)
+  const { pathname, search } = useLocation()
   const [mobileOpen, setMobileOpen] = useState(false)
-  const [scrolled, setScrolled] = useState(false)
+  const [scrollY, setScrollY] = useState(0)
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 8)
-    window.addEventListener('scroll', onScroll)
+    const onScroll = () => setScrollY(window.scrollY)
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
-  const nav = ({ isActive }: { isActive: boolean }) =>
-    `text-sm font-medium transition ${isActive ? 'text-caramel-600' : 'text-coffee-600 hover:text-coffee-900'}`
+  const isHome = pathname === '/'
+  // Trang chủ, còn ở vùng hero -> header trong suốt dạng kính mờ nằm đè lên ảnh
+  const overlay = isHome && scrollY < 420
+  const scrolled = scrollY > 8
+
+  const links: [string, string][] = [
+    ['/', 'Trang chủ'], ['/shop', 'Cửa hàng'], ['/shop?category=do-uong-pha-che', 'Đồ uống'],
+    ['/shop?category=ca-phe-hat', 'Cà phê hạt'], ...(user ? [['/orders', 'Đơn hàng'] as [string, string]] : []),
+  ]
+  const isActive = (to: string) => (to.includes('?') ? pathname + search === to : pathname === to && (to !== '/shop' || !search))
+  const icon = overlay ? 'text-white hover:bg-white/15' : 'text-coffee-700 hover:bg-coffee-50'
+  const badgeRing = overlay ? 'ring-transparent' : 'ring-cream-50'
 
   return (
-    <header className={`sticky top-0 z-40 border-b bg-cream-50/85 backdrop-blur-lg transition ${scrolled ? 'border-coffee-100 shadow-sm' : 'border-transparent'}`}>
-      <div className="container-page flex h-16 items-center gap-4 lg:gap-8">
-        <button className="-ml-2 rounded-lg p-2 md:hidden" onClick={() => setMobileOpen(true)} aria-label="Menu"><Menu size={22} /></button>
-        <Logo />
-        <nav className="hidden items-center gap-6 md:flex">
-          <NavLink to="/" end className={nav}>Trang chủ</NavLink>
-          <NavLink to="/shop" className={nav}>Cửa hàng</NavLink>
-          {user && <NavLink to="/orders" className={nav}>Đơn hàng</NavLink>}
-        </nav>
-        <div className="hidden max-w-md flex-1 md:block"><SearchBox /></div>
-        <div className="ml-auto flex items-center gap-1 sm:gap-2">
-          <ThemeToggle className="text-coffee-700" />
+    <header className={
+      overlay ? 'fixed inset-x-0 top-0 z-40 px-2 pt-2 sm:px-3 sm:pt-3'
+        : `${isHome ? 'fixed inset-x-0 top-0 animate-header-in' : 'sticky top-0'} z-40 border-b bg-cream-50/85 backdrop-blur-lg transition ${scrolled ? 'border-coffee-100 shadow-sm' : 'border-transparent'}`
+    }>
+      <div className={`container-page flex h-16 items-center gap-4 lg:gap-6 ${overlay ? 'sm:h-20' : ''}`}>
+        <button className={`-ml-2 rounded-lg p-2 md:hidden ${overlay ? 'text-white' : ''}`} onClick={() => setMobileOpen(true)} aria-label="Menu"><Menu size={22} /></button>
+        <Logo light={overlay} />
+
+        {overlay ? (
+          // Thanh menu dạng "viên thuốc" kính mờ ở giữa như ảnh mẫu
+          <nav className="mx-auto hidden items-center gap-1 rounded-full border border-white/15 bg-white/10 p-1.5 backdrop-blur-md md:flex">
+            {links.map(([to, label]) => (
+              <Link key={to} to={to} className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${isActive(to) ? 'bg-white text-espresso-900' : 'text-white/85 hover:bg-white/15 hover:text-white'}`}>
+                {label}
+              </Link>
+            ))}
+          </nav>
+        ) : (
+          <>
+            <nav className="hidden items-center gap-6 md:flex">
+              {links.slice(0, 2).concat(user ? [['/orders', 'Đơn hàng']] : []).map(([to, label]) => (
+                <NavLink key={to} to={to} end className={({ isActive: a }) => `text-sm font-medium transition ${a ? 'text-caramel-600' : 'text-coffee-600 hover:text-coffee-900'}`}>{label}</NavLink>
+              ))}
+            </nav>
+            <div className="hidden max-w-md flex-1 md:block"><SearchBox /></div>
+          </>
+        )}
+
+        <div className={`flex items-center gap-1 sm:gap-2 ${overlay ? '' : 'ml-auto'}`}>
+          {overlay && <Link to="/shop" className={`hidden rounded-full p-2.5 sm:block ${icon}`} aria-label="Tìm kiếm"><Search size={20} /></Link>}
+          <ThemeToggle className={icon} />
           {user && (
-            <Link to="/wishlist" className="relative hidden rounded-full p-2.5 text-coffee-700 hover:bg-coffee-50 sm:block" aria-label="Yêu thích">
+            <Link to="/wishlist" className={`relative hidden rounded-full p-2.5 sm:block ${icon}`} aria-label="Yêu thích">
               <Heart size={22} />
               {wishCount > 0 && (
-                <span className="absolute right-0.5 top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1 text-[11px] font-bold text-white ring-2 ring-cream-50">
+                <span className={`absolute right-0.5 top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1 text-[11px] font-bold text-white ring-2 ${badgeRing}`}>
                   {wishCount}
                 </span>
               )}
             </Link>
           )}
-          <Link to="/cart" className="relative rounded-full p-2.5 text-coffee-700 hover:bg-coffee-50" aria-label="Giỏ hàng" data-cart-icon>
+          <Link to="/cart" className={`relative rounded-full p-2.5 ${icon}`} aria-label="Giỏ hàng" data-cart-icon>
             <ShoppingBag size={22} />
             {count > 0 && (
-              <span className="absolute right-0.5 top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-caramel-500 px-1 text-[11px] font-bold text-white ring-2 ring-cream-50">
+              <span className={`absolute right-0.5 top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-caramel-500 px-1 text-[11px] font-bold text-white ring-2 ${badgeRing}`}>
                 {count > 99 ? '99+' : count}
               </span>
             )}
           </Link>
-          <UserMenu />
+          <UserMenu overlay={overlay} />
         </div>
       </div>
 
       {mobileOpen && (
         <div className="fixed inset-0 z-50 bg-espresso-900/40 md:hidden" onClick={() => setMobileOpen(false)}>
-          <div className="h-full w-80 max-w-[85vw] bg-cream-50 p-5 animate-slide-up" onClick={(e) => e.stopPropagation()}>
+          <div className="h-full w-80 max-w-[85vw] bg-cream-50 p-5 text-coffee-900 animate-slide-up" onClick={(e) => e.stopPropagation()}>
             <div className="mb-6 flex items-center justify-between">
               <Logo />
               <button onClick={() => setMobileOpen(false)} aria-label="Đóng"><X /></button>
             </div>
             <SearchBox onDone={() => setMobileOpen(false)} />
             <nav className="mt-6 flex flex-col gap-1" onClick={() => setMobileOpen(false)}>
-              {[['/', 'Trang chủ'], ['/shop', 'Cửa hàng'], ['/cart', 'Giỏ hàng'], ...(user ? [['/orders', 'Đơn hàng của tôi'], ['/wishlist', 'Yêu thích'], ['/profile', 'Tài khoản']] : [['/login', 'Đăng nhập'], ['/register', 'Đăng ký']])].map(([to, label]) => (
-                <NavLink key={to} to={to} end className={({ isActive }) => `rounded-xl px-3 py-2.5 font-medium ${isActive ? 'bg-coffee-800 text-cream-50' : 'hover:bg-coffee-50'}`}>
+              {[['/', 'Trang chủ'], ['/shop', 'Cửa hàng'], ['/shop?category=do-uong-pha-che', 'Đồ uống'], ['/cart', 'Giỏ hàng'], ...(user ? [['/orders', 'Đơn hàng của tôi'], ['/wishlist', 'Yêu thích'], ['/profile', 'Tài khoản']] : [['/login', 'Đăng nhập'], ['/register', 'Đăng ký']])].map(([to, label]) => (
+                <NavLink key={to} to={to} end className={({ isActive: a }) => `rounded-xl px-3 py-2.5 font-medium ${a ? 'bg-coffee-800 text-cream-50' : 'hover:bg-coffee-50'}`}>
                   {label}
                 </NavLink>
               ))}
@@ -252,6 +283,22 @@ function Footer() {
   )
 }
 
+/** Thanh mảnh trên cùng cho biết đã cuộn bao nhiêu % trang */
+function ScrollProgress() {
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const on = () => {
+      const max = document.documentElement.scrollHeight - window.innerHeight
+      ref.current?.style.setProperty('--progress', String(max > 0 ? window.scrollY / max : 0))
+    }
+    on()
+    window.addEventListener('scroll', on, { passive: true })
+    window.addEventListener('resize', on)
+    return () => { window.removeEventListener('scroll', on); window.removeEventListener('resize', on) }
+  }, [])
+  return <div ref={ref} className="scroll-progress fixed inset-x-0 top-0 z-[60] h-[3px] bg-gradient-to-r from-caramel-400 via-caramel-500 to-rose-400" aria-hidden />
+}
+
 export default function Layout() {
   const { pathname } = useLocation()
   const token = useAuth((s) => s.token)
@@ -263,6 +310,7 @@ export default function Layout() {
   }, [token])
   return (
     <div className="flex min-h-screen flex-col">
+      <ScrollProgress />
       <Header />
       <main className="flex-1">
         {/* key đổi theo đường dẫn -> mỗi lần chuyển trang chạy lại hiệu ứng xuất hiện */}

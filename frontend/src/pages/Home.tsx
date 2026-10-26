@@ -7,9 +7,8 @@ import ProductCard, { ProductCardSkeleton } from '../components/ProductCard'
 import Reveal from '../components/Reveal'
 import { formatVND } from '../lib/format'
 import { useDocumentTitle } from '../lib/hooks'
-import { useCountUp, useInView } from '../lib/animations'
+import HeroSlider from '../components/HeroSlider'
 
-const HERO_IMG = 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=1600&q=80&auto=format&fit=crop'
 const STORY_IMG = 'https://images.unsplash.com/photo-1442512595331-e89e73853f31?w=1000&q=80&auto=format&fit=crop'
 const MARQUEE = ['Rang mới mỗi tuần', 'Arabica Cầu Đất', 'Robusta Buôn Ma Thuột', 'Pha tại quán', 'Miễn phí ship từ 500k',
   'Tùy chỉnh đá · đường · topping', 'Specialty Ethiopia', 'Trợ lý AI tư vấn 24/7']
@@ -39,77 +38,6 @@ function SectionHeader({ eyebrow, title, link }: { eyebrow: string; title: strin
         </Link>
       )}
     </Reveal>
-  )
-}
-
-/** Hạt cà phê trang trí bay lơ lửng */
-function Bean({ className, style }: { className: string; style?: React.CSSProperties }) {
-  return (
-    <svg viewBox="0 0 64 64" className={`pointer-events-none absolute ${className}`} style={style} aria-hidden>
-      <ellipse cx="32" cy="32" rx="14" ry="20" fill="#d08a3c" transform="rotate(30 32 32)" />
-      <path d="M25 16c9 7 5 25 14 32" stroke="#3b2a20" strokeWidth="3" fill="none" strokeLinecap="round" />
-    </svg>
-  )
-}
-
-function Stat({ to, suffix, label, decimals = 0 }: { to: number; suffix: string; label: string; decimals?: number }) {
-  const { ref, visible } = useInView<HTMLDivElement>(0.5)
-  const v = useCountUp(to, visible)
-  return (
-    <div ref={ref}>
-      <p className="font-display text-2xl font-bold sm:text-3xl">{v.toFixed(decimals).replace('.', ',')}{suffix}</p>
-      <p className="text-sm text-latte-200">{label}</p>
-    </div>
-  )
-}
-
-function Hero() {
-  const d = (ms: number) => ({ '--d': `${ms}ms` }) as React.CSSProperties
-  return (
-    <section className="relative overflow-hidden">
-      <div className="absolute inset-0 overflow-hidden">
-        <img src={HERO_IMG} alt="" className="h-full w-full object-cover animate-kenburns" />
-        <div className="absolute inset-0 bg-gradient-to-r from-espresso-900/95 via-espresso-900/75 to-espresso-900/20" />
-        <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-espresso-900/60 to-transparent" />
-      </div>
-      <Bean className="right-[12%] top-[18%] h-16 w-16 opacity-80 animate-float" />
-      <Bean className="right-[30%] top-[62%] h-10 w-10 opacity-60 animate-float-slow" style={{ animationDelay: '-3s' }} />
-      <Bean className="right-[6%] top-[70%] h-12 w-12 opacity-70 animate-float" style={{ animationDelay: '-1.5s' }} />
-
-      <div className="container-page relative py-24 sm:py-32 lg:py-40">
-        <div className="max-w-xl text-latte-50">
-          <span className="hero-in chip bg-caramel-500/20 px-3 py-1 text-caramel-400 ring-1 ring-caramel-500/40" style={d(0)}>
-            <Sparkles size={13} /> Rang mới mỗi thứ Hai
-          </span>
-          <h1 className="hero-in mt-5 font-display text-4xl font-bold leading-tight sm:text-6xl" style={d(120)}>
-            Đánh thức ngày mới với{' '}
-            <span className="relative inline-block text-caramel-400">
-              hương vị thật
-              <svg viewBox="0 0 200 12" className="absolute -bottom-2 left-0 w-full" aria-hidden>
-                <path d="M2 9 Q 50 2 100 7 T 198 5" fill="none" stroke="#d08a3c" strokeWidth="3" strokeLinecap="round"
-                  strokeDasharray="220" strokeDashoffset="220" style={{ animation: 'draw 1.2s .9s ease forwards' }} />
-              </svg>
-            </span>
-          </h1>
-          <p className="hero-in mt-6 text-lg leading-relaxed text-latte-100" style={d(260)}>
-            Cà phê specialty từ Cầu Đất, Buôn Ma Thuột đến Ethiopia – rang thủ công, pha tại quán theo đúng gu của bạn.
-          </p>
-          <div className="hero-in mt-8 flex flex-wrap gap-3" style={d(400)}>
-            <Link to="/shop" className="btn-accent shine group rounded-full px-7 py-3.5 text-base">
-              Mua ngay <ArrowRight size={18} className="transition group-hover:translate-x-1" />
-            </Link>
-            <Link to="/shop?category=do-uong-pha-che" className="btn rounded-full border border-white/30 px-7 py-3.5 text-base text-white backdrop-blur transition hover:-translate-y-0.5 hover:bg-white/10">
-              🥤 Gọi đồ uống
-            </Link>
-          </div>
-          <div className="hero-in mt-10 flex gap-8" style={d(540)}>
-            <Stat to={33} suffix="+" label="Sản phẩm" />
-            <Stat to={4.8} suffix="★" label="Đánh giá" decimals={1} />
-            <Stat to={10} suffix="k+" label="Khách hàng" />
-          </div>
-        </div>
-      </div>
-    </section>
   )
 }
 
@@ -191,10 +119,10 @@ export default function Home() {
 
   return (
     <>
-      <Hero />
+      <HeroSlider />
 
       {/* USP */}
-      <section className="container-page relative z-10 -mt-10">
+      <section className="container-page relative z-10 mt-8">
         <div className="card grid grid-cols-2 gap-6 p-6 shadow-xl shadow-coffee-900/5 lg:grid-cols-4">
           {[
             [Truck, 'Miễn phí giao hàng', 'Cho đơn từ 500.000đ'],

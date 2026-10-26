@@ -180,6 +180,9 @@ AdminLayout: toast + âm báo, badge số đơn chờ; store.version++ → Dashb
 
 - **Animation**: không dùng thư viện. `useInView` (IntersectionObserver) + component `<Reveal>` cho hiệu ứng hiện dần khi cuộn (có `delay` để chạy lần lượt); `useCountUp` (requestAnimationFrame) cho số liệu; `flyToCart` (Web Animations API) nhân bản ảnh bay theo đường cong tới `[data-cart-icon]`; keyframes trong `index.css`. Tôn trọng `prefers-reduced-motion`. Lưu ý: `will-change: transform` tạo containing block làm lệch phần tử `position: fixed`, nên bỏ sau khi chạy xong.
 
+- **Hero slider** (`components/HeroSlider.tsx`): 3 lớp chồng nhau – ảnh nền → chữ khổng lồ → **bản sao ảnh có `mask-image: radial-gradient(...)`** chỉ lộ vùng vật thể chính, nên vật thể trông như đứng trước chữ mà không cần ảnh PNG tách nền. `useParallax` ghi biến CSS `--mx/--my/--sy` mỗi khung hình (không re-render React); mỗi lớp dịch với hệ số khác nhau → chiều sâu. Thời gian mỗi cảnh gắn với chính animation của thanh tiến trình (`onAnimationEnd` → cảnh kế), nên tạm dừng khi rê chuột chỉ cần `animation-play-state: paused`.
+- Chữ dùng `background-clip: text` với gradient mờ dần; phải nới `padding-top` của từng ký tự vì nền chỉ phủ trong hộp phần tử – nếu không, dấu tiếng Việt (À, Ê, Ữ) nằm ngoài hộp sẽ biến mất.
+
 ## 4b. Triển khai (Docker)
 `docker compose up --build` → nginx (frontend) ở cổng 8080 phục vụ file tĩnh đã build, chuyển `/api` và `/uploads` sang container FastAPI; CSDL SQLite và ảnh upload nằm trong volume nên không mất khi khởi động lại.
 

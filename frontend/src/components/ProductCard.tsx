@@ -5,7 +5,7 @@ import type { Product, Variant } from '../api/types'
 import { imageUrl } from '../api/client'
 import { type LineOptions, optionsLabel, useCart } from '../store/cart'
 import { DEFAULT_META } from '../lib/meta'
-import { flyToCart } from '../lib/animations'
+import { flyToCart, useTilt } from '../lib/animations'
 import { useWishlist } from '../store/wishlist'
 import { discountPercent, formatVND } from '../lib/format'
 import { Skeleton, Stars } from './ui'
@@ -56,11 +56,14 @@ export function HeartButton({ product, className = '' }: { product: Product; cla
 
 export default function ProductCard({ product, index = 0 }: { product: Product; index?: number }) {
   const add = useCart((s) => s.add)
+  const tiltRef = useTilt<HTMLDivElement>()
   const off = discountPercent(product.price, product.original_price)
 
   return (
     <Reveal delay={(index % 4) * 90} className="h-full">
-    <div className="group card relative flex h-full flex-col overflow-hidden transition duration-500 ease-out hover:-translate-y-2 hover:shadow-2xl hover:shadow-coffee-900/10">
+    <div ref={tiltRef} className="tilt group card relative flex h-full flex-col overflow-hidden transition duration-500 ease-out hover:-translate-y-2 hover:shadow-2xl hover:shadow-coffee-900/10">
+      {/* vệt sáng chạy theo chuột */}
+      <span className="tilt-glare pointer-events-none absolute inset-0 z-10 opacity-0 transition duration-300 group-hover:opacity-100" aria-hidden />
       <Link to={`/products/${product.slug}`} className="relative block aspect-square overflow-hidden bg-cream-100">
         <img
           src={imageUrl(product.image_url)}
@@ -68,7 +71,7 @@ export default function ProductCard({ product, index = 0 }: { product: Product; 
           loading="lazy"
           className={`h-full w-full object-cover transition duration-500 group-hover:scale-105 ${!product.in_stock ? 'opacity-60 grayscale' : ''}`}
         />
-        <div className="absolute left-3 top-3 flex flex-col gap-1.5">
+        <div className="absolute left-3 top-3 flex flex-col items-start gap-1.5">
           {off > 0 && <span className="chip bg-rose-500 text-white">-{off}%</span>}
           {product.is_featured && <span className="chip bg-espresso-800/90 text-latte-50">Nổi bật</span>}
           {product.is_drink && <span className="chip bg-surface/90 text-coffee-800 backdrop-blur">🧊 Tùy chỉnh đá · đường</span>}
