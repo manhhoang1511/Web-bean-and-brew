@@ -119,7 +119,7 @@ export default function HeroSlider() {
             <div className="max-w-2xl">
               <div className="hero-in flex gap-8 sm:gap-14" style={{ '--d': '300ms' } as CSSProperties}>
                 <Stat to={20} suffix="K+" label="Ly cà phê mỗi tháng" />
-                <Stat to={33} suffix="+" label="Món & sản phẩm" />
+                <Stat to={63} suffix="+" label="Món & sản phẩm" />
                 <Stat to={4.8} suffix="★" label="Đánh giá trung bình" decimals={1} />
               </div>
               <div className="mt-8 flex flex-col gap-5 sm:flex-row sm:items-center">

@@ -69,6 +69,17 @@ Tài liệu ghi lại cách dự án được xây dựng theo phương pháp "V
 | Hero không tự chuyển cảnh trên điện thoại (dự đoán trước) | Đọc lại code | Thẻ có thanh tiến trình bị `display:none` trên mobile → animation không chạy → không có `animationend` | Chấm chỉ báo mobile có thanh tiến trình riêng |
 | Logo xuống 2 dòng trên mobile, nhãn "Nổi bật" bị kéo dài | Ảnh chụp 390px / trang cửa hàng | Thiếu `whitespace-nowrap`; flex dọc mặc định `align-items: stretch` | `whitespace-nowrap`, `items-start` |
 
+### Vòng 5 – "Thêm hiệu ứng, video, tách trang chủ/cửa hàng, thêm 30 sản phẩm"
+
+| Vấn đề | Phát hiện bằng | Nguyên nhân | Xử lý |
+|---|---|---|---|
+| Unsplash/Pexels chặn tìm ảnh tự động | Gọi thử | Cần API key | Dùng Openverse (CC0), dựng bảng xem trước để chọn ảnh bằng mắt |
+| Link ảnh rawpixel có chữ ký hết hạn | Đọc URL | Signed URL | Tải về, thu nhỏ 900px, lưu trong `backend/static` |
+| Wikimedia/StockSnap trả 403 | Script tải ảnh | Chính sách User-Agent khác nhau | UA mô tả dự án cho Wikimedia, UA trình duyệt cho StockSnap |
+| Ảnh in thương hiệu thật (chai cold brew, máy xay STRAUME) | Xem bảng ảnh | — | Thay ảnh không thương hiệu |
+| Tiêu đề tách chữ bị dính liền | Ảnh chụp | Dấu cách ở cuối `inline-block` bị bỏ | Đưa dấu cách ra ngoài phần tử |
+| Lưới danh mục trống 1 ô | Ảnh chụp | 7 thẻ trong lưới 4 cột | 2 thẻ cuối chiếm 2 cột |
+
 ## 4. Lịch sử Git
 Mỗi giai đoạn là một commit riêng (`git log --oneline`): MVP → sửa ảnh → sửa quy tắc nghiệp vụ → biến thể + wishlist → nâng cấp chatbot → admin/UX → tài liệu. Thông điệp commit ghi rõ *làm gì và vì sao*, có thể dùng khi trình bày quy trình.
 

@@ -1,12 +1,24 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { PackageSearch, SlidersHorizontal, X } from 'lucide-react'
-import { api } from '../api/client'
+import { api, imageUrl } from '../api/client'
 import type { Category, Page, Product } from '../api/types'
 import ProductCard, { ProductCardSkeleton } from '../components/ProductCard'
 import { EmptyState, Pagination } from '../components/ui'
 import { formatShortVND } from '../lib/format'
 import { useDocumentTitle } from '../lib/hooks'
+
+const UNS = (id: string) => `https://images.unsplash.com/photo-${id}?w=1600&q=75&auto=format&fit=crop`
+const SHOP_BANNERS: Record<string, string> = {
+  '': UNS('1501339847302-ac426a4a7cbb'),
+  'ca-phe-hat': '/static/products/arabica-son-la.jpg',
+  'ca-phe-bot': '/static/products/bot-espresso-blend.jpg',
+  'ca-phe-pha-san': UNS('1461023058943-07fcbe16d735'),
+  'tra-matcha': '/static/products/tra-xanh-thai-nguyen.jpg',
+  'dung-cu-pha-che': UNS('1442512595331-e89e73853f31'),
+  'banh-do-an-kem': '/static/products/brownie-socola-cam.jpg',
+  'do-uong-pha-che': UNS('1592663527359-cf6642f54cff'),
+}
 
 const SORTS = [
   ['newest', 'Mới nhất'],
@@ -19,8 +31,7 @@ const PRICE_PRESETS: [number | null, number | null][] = [
   [null, 100000], [100000, 200000], [200000, 300000], [300000, null],
 ]
 
-function Filters({ categories, params, update }: {
-  categories: Category[]
+function Filters({ params, update }: {
   params: URLSearchParams
   update: (changes: Record<string, string | null>) => void
 }) {
@@ -30,27 +41,11 @@ function Filters({ categories, params, update }: {
     setMin(params.get('min_price') ?? '')
     setMax(params.get('max_price') ?? '')
   }, [params])
-  const active = params.get('category')
   const curMin = params.get('min_price'), curMax = params.get('max_price')
-
-  const item = (selected: boolean) =>
-    `flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm transition ${selected ? 'bg-coffee-800 font-semibold text-cream-50' : 'text-coffee-700 hover:bg-coffee-50'}`
 
   return (
     <div className="space-y-8">
-      <div>
-        <h3 className="mb-3 text-xs font-bold uppercase tracking-widest text-coffee-400">Danh mục</h3>
-        <div className="space-y-1">
-          <button className={item(!active)} onClick={() => update({ category: null })}>Tất cả sản phẩm</button>
-          {categories.map((c) => (
-            <button key={c.id} className={item(active === c.slug)} onClick={() => update({ category: c.slug })}>
-              <span>{c.icon} {c.name}</span>
-              <span className={`text-xs ${active === c.slug ? 'text-coffee-200' : 'text-coffee-300'}`}>{c.product_count}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-
+      {/* Danh mục đã chuyển lên hàng nút lọc nhanh phía trên */}
       <div>
         <h3 className="mb-3 text-xs font-bold uppercase tracking-widest text-coffee-400">Khoảng giá</h3>
         <div className="grid grid-cols-2 gap-2">
@@ -119,15 +114,43 @@ export default function Shop() {
   if (params.get('in_stock')) chips.push(['in_stock', 'Còn hàng'])
 
   return (
-    <div className="container-page py-10">
-      <div className="mb-8">
-        <h1 className="font-display text-3xl font-bold sm:text-4xl">{q ? `Kết quả cho “${q}”` : currentCat?.name ?? 'Tất cả sản phẩm'}</h1>
-        <p className="mt-1 text-coffee-500">{currentCat?.description ?? 'Cà phê, trà và mọi thứ cho tách cà phê hoàn hảo'}</p>
+    <div className="container-page py-8">
+      {/* Banner cửa hàng: ảnh + tiêu đề đổi theo danh mục đang xem */}
+      <div className="relative mb-6 overflow-hidden rounded-[2rem] bg-espresso-900 text-latte-50">
+        <img key={currentCat?.slug ?? 'all'} src={imageUrl(SHOP_BANNERS[currentCat?.slug ?? ''] ?? SHOP_BANNERS[''])} alt=""
+          className="absolute inset-0 h-full w-full object-cover opacity-60 animate-kenburns" />
+        <div className="absolute inset-0 bg-gradient-to-r from-espresso-900/95 via-espresso-900/60 to-transparent" />
+        <div key={`${currentCat?.slug}-${q}`} className="relative px-6 py-10 sm:px-10 sm:py-14">
+          <p className="slide-text text-sm font-semibold uppercase tracking-widest text-caramel-400">
+            {q ? 'Kết quả tìm kiếm' : 'Cửa hàng Bean & Brew'}
+          </p>
+          <h1 className="slide-text mt-2 font-display text-3xl font-bold sm:text-5xl" style={{ animationDelay: '.08s' }}>
+            {q ? `“${q}”` : currentCat ? `${currentCat.icon} ${currentCat.name}` : 'Tất cả sản phẩm'}
+          </h1>
+          <p className="slide-text mt-2 max-w-lg text-latte-200" style={{ animationDelay: '.16s' }}>
+            {currentCat?.description ?? 'Cà phê, trà, đồ uống pha chế và mọi thứ cho tách cà phê hoàn hảo – chọn món và thêm vào giỏ ngay.'}
+          </p>
+        </div>
+      </div>
+
+      {/* Lọc nhanh theo danh mục */}
+      <div className="scrollbar-thin -mx-4 mb-8 flex gap-2 overflow-x-auto px-4 pb-1">
+        {[{ slug: '', name: 'Tất cả', icon: '✨', product_count: categories.reduce((n, c) => n + (c.product_count ?? 0), 0) }, ...categories].map((c) => {
+          const active = (params.get('category') ?? '') === c.slug
+          return (
+            <button key={c.slug || 'all'} onClick={() => update({ category: c.slug || null })}
+              className={`flex shrink-0 items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition duration-300 active:scale-95 ${
+                active ? 'border-coffee-800 bg-coffee-800 text-cream-50 shadow-md' : 'border-coffee-100 bg-surface hover:-translate-y-0.5 hover:border-coffee-300'}`}>
+              <span>{c.icon}</span> {c.name}
+              <span className={`rounded-full px-1.5 text-xs ${active ? 'bg-white/20' : 'bg-coffee-50 text-coffee-400'}`}>{c.product_count}</span>
+            </button>
+          )
+        })}
       </div>
 
       <div className="flex gap-10">
         <aside className="hidden w-64 shrink-0 lg:block">
-          <div className="sticky top-24"><Filters categories={categories} params={params} update={update} /></div>
+          <div className="sticky top-24"><Filters params={params} update={update} /></div>
         </aside>
 
         <div className="min-w-0 flex-1">
@@ -172,7 +195,7 @@ export default function Shop() {
               <h2 className="text-lg font-semibold">Bộ lọc</h2>
               <button onClick={() => setShowFilters(false)} aria-label="Đóng"><X /></button>
             </div>
-            <Filters categories={categories} params={params} update={update} />
+            <Filters params={params} update={update} />
           </div>
         </div>
       )}

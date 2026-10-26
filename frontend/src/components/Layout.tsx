@@ -10,6 +10,7 @@ import { formatVND } from '../lib/format'
 import { useDebounce } from '../lib/hooks'
 import ChatWidget from './ChatWidget'
 import ThemeToggle from './ThemeToggle'
+import { BackToTop, CustomCursor, Preloader, useRipple } from './effects/GlobalEffects'
 
 export function Logo({ light }: { light?: boolean }) {
   return (
@@ -302,6 +303,7 @@ function ScrollProgress() {
 export default function Layout() {
   const { pathname } = useLocation()
   const token = useAuth((s) => s.token)
+  useRipple()
   useEffect(() => { window.scrollTo(0, 0) }, [pathname])
   // Đăng nhập -> tải danh sách yêu thích; đăng xuất -> xóa
   useEffect(() => {
@@ -310,6 +312,8 @@ export default function Layout() {
   }, [token])
   return (
     <div className="flex min-h-screen flex-col">
+      <Preloader />
+      <CustomCursor />
       <ScrollProgress />
       <Header />
       <main className="flex-1">
@@ -317,6 +321,7 @@ export default function Layout() {
         <div key={pathname} className="animate-page"><Outlet /></div>
       </main>
       <Footer />
+      <BackToTop />
       <ChatWidget />
     </div>
   )

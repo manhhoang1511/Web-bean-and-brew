@@ -183,6 +183,10 @@ AdminLayout: toast + âm báo, badge số đơn chờ; store.version++ → Dashb
 - **Hero slider** (`components/HeroSlider.tsx`): 3 lớp chồng nhau – ảnh nền → chữ khổng lồ → **bản sao ảnh có `mask-image: radial-gradient(...)`** chỉ lộ vùng vật thể chính, nên vật thể trông như đứng trước chữ mà không cần ảnh PNG tách nền. `useParallax` ghi biến CSS `--mx/--my/--sy` mỗi khung hình (không re-render React); mỗi lớp dịch với hệ số khác nhau → chiều sâu. Thời gian mỗi cảnh gắn với chính animation của thanh tiến trình (`onAnimationEnd` → cảnh kế), nên tạm dừng khi rê chuột chỉ cần `animation-play-state: paused`.
 - Chữ dùng `background-clip: text` với gradient mờ dần; phải nới `padding-top` của từng ký tự vì nền chỉ phủ trong hộp phần tử – nếu không, dấu tiếng Việt (À, Ê, Ữ) nằm ngoài hộp sẽ biến mất.
 
+- **Hiệu ứng theo cuộn** dùng chung hook `useScrollProgress` (ghi biến `--p` 0..1, không re-render): video phóng to (`width/border-radius` tính bằng `calc()` theo `--p`), đoạn văn sáng dần (mỗi chữ có `--i`, `opacity: clamp(...)`), ảnh câu chuyện parallax, và **cuộn ngang ghim** (section cao 320vh, phần trong `position: sticky`, track dịch `translateX(-p × độ dài thừa)`; màn hình nhỏ chuyển sang xếp dọc).
+- Video chỉ tải/phát khi lọt vào màn hình (`IntersectionObserver` → `play()/pause()`, `preload="none"`) để tiết kiệm băng thông.
+- Pháo giấy: `<canvas>` + vật lý đơn giản (vận tốc, trọng lực, lực cản), tự hủy sau 3 giây.
+
 ## 4b. Triển khai (Docker)
 `docker compose up --build` → nginx (frontend) ở cổng 8080 phục vụ file tĩnh đã build, chuyển `/api` và `/uploads` sang container FastAPI; CSDL SQLite và ảnh upload nằm trong volume nên không mất khi khởi động lại.
 

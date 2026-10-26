@@ -8,6 +8,7 @@ import { ConfirmDialog, EmptyState, PageLoader, Spinner, StatusBadge } from '../
 import { useCart } from '../store/cart'
 import { PAYMENT_METHOD, PAYMENT_STATUS, formatDate, formatVND } from '../lib/format'
 import { useDocumentTitle } from '../lib/hooks'
+import { fireConfetti } from '../lib/confetti'
 
 const TABS: [OrderStatus | '', string][] = [
   ['', 'Tất cả'], ['pending', 'Đang xử lý'], ['shipping', 'Đang giao'], ['completed', 'Hoàn thành'], ['cancelled', 'Đã hủy'],
@@ -125,6 +126,10 @@ export function OrderDetail() {
   useEffect(() => {
     api.get<Order>(`/api/orders/${code}`).then((r) => setOrder(r.data)).catch(() => setError(true))
   }, [code])
+  // Vừa đặt hàng thành công -> bắn pháo giấy ăn mừng
+  useEffect(() => {
+    if (success) fireConfetti()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const cancel = async () => {
     setCancelling(true)

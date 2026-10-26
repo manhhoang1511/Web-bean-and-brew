@@ -71,6 +71,12 @@ cd backend && .venv\Scripts\python -m pytest -q
 
 ## ✅ Chức năng
 
+### Trang chủ (giới thiệu) và Cửa hàng (mua sắm) tách riêng
+- **Trang chủ** chỉ giới thiệu: hero trình chiếu, đoạn giới thiệu sáng dần theo cuộn, **video giới thiệu** (phóng to toàn màn hình khi cuộn, bấm để xem đầy đủ), **"Hành trình hạt cà phê" cuộn ngang** qua 4 video, khám phá danh mục, menu đồ uống, 2 hàng sản phẩm tiêu biểu chạy ngược chiều, câu chuyện, cảm nhận khách hàng, lời mời "Vào cửa hàng"
+- **Cửa hàng** (`/shop`): banner theo danh mục, nút lọc nhanh, bộ lọc giá, lưới sản phẩm để chọn và mua
+- **63 sản phẩm** (16 loại cà phê hạt) – nguồn ảnh/video xem [docs/CREDITS.md](docs/CREDITS.md)
+- Hiệu ứng toàn trang: màn hình chào, con trỏ tùy biến, gợn sóng khi bấm nút, nút về đầu trang có vòng tiến trình, pháo giấy khi đặt hàng thành công
+
 ### Khách hàng
 - Đăng ký / đăng nhập JWT, hồ sơ, đổi mật khẩu, **quên mật khẩu** (link dùng 1 lần, hết hạn sau 15 phút)
 - Trang chủ: hero, danh mục, sản phẩm nổi bật, bán chạy

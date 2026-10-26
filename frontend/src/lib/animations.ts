@@ -123,6 +123,43 @@ export function useMagnetic<T extends HTMLElement>(strength = 0.3) {
   return ref
 }
 
+/**
+ * Tiến độ cuộn của phần tử -> biến CSS --p (0..1), không re-render.
+ * mode 'enter': 0 khi mép trên vừa chạm đáy màn hình, 1 khi mép trên chạm đỉnh (dùng cho phóng to video).
+ * mode 'through': 0 khi phần tử bắt đầu ghim, 1 khi cuộn hết chiều cao (dùng cho cuộn ngang ghim).
+ */
+export function useScrollProgress<T extends HTMLElement>(mode: 'enter' | 'through' = 'enter', onProgress?: (p: number) => void) {
+  const ref = useRef<T>(null)
+  const cb = useRef(onProgress)
+  cb.current = onProgress
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    let raf = 0
+    const update = () => {
+      raf = 0
+      const r = el.getBoundingClientRect()
+      const vh = window.innerHeight
+      const p = mode === 'enter'
+        ? (vh - r.top) / vh
+        : -r.top / Math.max(1, r.height - vh)
+      const clamped = Math.min(1, Math.max(0, p))
+      el.style.setProperty('--p', clamped.toFixed(4))
+      cb.current?.(clamped)
+    }
+    const onScroll = () => { if (!raf) raf = requestAnimationFrame(update) }
+    update()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    window.addEventListener('resize', onScroll)
+    return () => {
+      cancelAnimationFrame(raf)
+      window.removeEventListener('scroll', onScroll)
+      window.removeEventListener('resize', onScroll)
+    }
+  }, [mode])
+  return ref
+}
+
 /** Trả về ref + cờ `visible` khi phần tử lọt vào màn hình (chỉ kích hoạt 1 lần) */
 export function useInView<T extends HTMLElement>(threshold = 0.15) {
   const ref = useRef<T>(null)
