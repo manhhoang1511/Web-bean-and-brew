@@ -7,31 +7,31 @@ import { formatVND } from '../../lib/format'
 import { useMagnetic, useScrollProgress } from '../../lib/animations'
 import Reveal from '../Reveal'
 import { getLenis } from '../../lib/smoothScroll'
+import { photo, video } from '../../lib/media'
 
-const WM = 'https://upload.wikimedia.org/wikipedia/commons/'
-const UNS = (id: string, w = 1200) => `https://images.unsplash.com/photo-${id}?w=${w}&q=80&auto=format&fit=crop`
+const UNS = (id: string, _w?: number) => photo(id) // ảnh đã tải sẵn về máy (chạy không cần mạng)
 
-/** Video giấy phép mở (Wikimedia Commons) – ghi công tác giả theo điều kiện giấy phép */
+/** Video giấy phép mở (Wikimedia Commons, đã tải về backend/static/media/video) – ghi công tác giả theo điều kiện giấy phép */
 export const VIDEOS = {
   espresso: {
-    loop: WM + 'transcoded/2/21/Morning_Espresso_Routine_%28abridged_version%29.webm/Morning_Espresso_Routine_%28abridged_version%29.webm.480p.vp9.webm',
-    full: WM + '2/21/Morning_Espresso_Routine_%28abridged_version%29.webm',
-    poster: 'https://thumb.wikimedia.org/wikipedia/commons/thumb/2/21/Morning_Espresso_Routine_%28abridged_version%29.webm/1280px--Morning_Espresso_Routine_%28abridged_version%29.webm.jpg',
+    loop: video('espresso.webm'),
+    full: video('espresso-full.webm'),
+    poster: video('espresso.jpg'),
     credit: '“Morning Espresso Routine” – Scott Schiller, CC BY 2.0',
   },
   cherries: {
-    loop: WM + 'transcoded/c/c2/Ripen_coffee_fruits%2C_Kodagu%2C_Karnataka.webm/Ripen_coffee_fruits%2C_Kodagu%2C_Karnataka.webm.480p.vp9.webm',
-    poster: 'https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c2/Ripen_coffee_fruits%2C_Kodagu%2C_Karnataka.webm/960px--Ripen_coffee_fruits%2C_Kodagu%2C_Karnataka.webm.jpg',
+    loop: video('cherries.webm'),
+    poster: video('cherries.jpg'),
     credit: 'Subhashish Panigrahi, CC BY-SA 3.0',
   },
   harvest: {
-    loop: WM + 'transcoded/0/05/Color_sorter_coffeebeans.webm/Color_sorter_coffeebeans.webm.720p.vp9.webm',
-    poster: 'https://thumb.wikimedia.org/wikipedia/commons/thumb/0/05/Color_sorter_coffeebeans.webm/1280px--Color_sorter_coffeebeans.webm.jpg',
+    loop: video('harvest.webm'),
+    poster: video('harvest.jpg'),
     credit: 'AlexanderKlink, CC0',
   },
   milk: {
-    loop: WM + 'transcoded/d/de/Milk_crown_HighSpeedPhoto.webm/Milk_crown_HighSpeedPhoto.webm.720p.vp9.webm',
-    poster: 'https://thumb.wikimedia.org/wikipedia/commons/thumb/d/de/Milk_crown_HighSpeedPhoto.webm/1280px--Milk_crown_HighSpeedPhoto.webm.jpg',
+    loop: video('milk.webm'),
+    poster: video('milk.jpg'),
     credit: 'Phonon.b, CC BY-SA 4.0',
   },
 }

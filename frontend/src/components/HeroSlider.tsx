@@ -2,8 +2,9 @@ import { useCallback, useEffect, useState, type CSSProperties } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowUpRight, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useCountUp, useInView, useMagnetic, useParallax } from '../lib/animations'
+import { photo } from '../lib/media'
 
-const IMG = (id: string, w = 1920) => `https://images.unsplash.com/photo-${id}?w=${w}&q=80&auto=format&fit=crop`
+const IMG = (id: string, _w?: number) => photo(id) // ảnh đã tải sẵn về máy (chạy không cần mạng)
 const DURATION = 6500 // ms mỗi cảnh
 
 /**

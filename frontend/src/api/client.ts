@@ -38,7 +38,7 @@ export function errorMessage(err: unknown, fallback = 'Đã có lỗi xảy ra')
 
 /** Ảnh upload lưu dạng /uploads/... -> nối với API base khi cần */
 export function imageUrl(url: string | null | undefined): string {
-  if (!url) return 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=600&q=60'
+  if (!url) url = '/static/media/u/1509042239860-f550ce710b93.jpg' // ảnh mặc định (đã tải sẵn)
   if (url.startsWith('/')) return (import.meta.env.VITE_API_URL ?? '') + url
   return url
 }

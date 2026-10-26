@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
+import QRCode from 'qrcode'
 import { Check, CheckCircle2, ChevronRight, Package, Truck, XCircle } from 'lucide-react'
 import { api, errorMessage, imageUrl } from '../api/client'
 import type { Order, OrderStatus, Product } from '../api/types'
@@ -84,6 +85,17 @@ export function MyOrders() {
       </div>
     </div>
   )
+}
+
+/** Mã QR tạo ngay trong trình duyệt (thư viện qrcode) – không gọi dịch vụ ngoài, chạy cả khi offline */
+function QrImage({ data, className }: { data: string; className?: string }) {
+  const [src, setSrc] = useState('')
+  useEffect(() => {
+    let alive = true
+    QRCode.toDataURL(data, { width: 320, margin: 1, color: { dark: '#251a14', light: '#ffffff' } }).then((u) => alive && setSrc(u))
+    return () => { alive = false }
+  }, [data])
+  return src ? <img src={src} alt="Mã QR thanh toán" className={className} /> : <div className={`${className} animate-pulse`} />
 }
 
 const STEPS: { key: OrderStatus; label: string; icon: typeof Check }[] = [
@@ -216,8 +228,7 @@ export function OrderDetail() {
 
       {order.payment_method === 'qr' && order.payment_status === 'unpaid' && order.status !== 'cancelled' && (
         <div className="card mb-6 flex flex-col items-center gap-6 rounded-[2rem] border-2 border-caramel-500/40 p-7 sm:flex-row animate-slide-up">
-          <img className="h-40 w-40 rounded-xl border border-coffee-100 bg-surface p-2"
-            src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(`BEANBREW|${order.code}|${order.total}`)}`} alt="Mã QR thanh toán" />
+          <QrImage data={`BEANBREW|${order.code}|${order.total}`} className="h-40 w-40 rounded-xl border border-coffee-100 bg-white p-2" />
           <div className="flex-1 text-sm">
             <p className="chip mb-2 bg-amber-50 text-amber-700 ring-1 ring-amber-200">⏳ Chờ thanh toán</p>
             <p className="text-lg font-semibold">Quét mã để chuyển khoản</p>

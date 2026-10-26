@@ -8,8 +8,9 @@ import { EmptyState, Pagination } from '../components/ui'
 import PageHero, { HeroStat } from '../components/PageHero'
 import { formatShortVND } from '../lib/format'
 import { useDocumentTitle } from '../lib/hooks'
+import { photo } from '../lib/media'
 
-const UNS = (id: string) => `https://images.unsplash.com/photo-${id}?w=1600&q=75&auto=format&fit=crop`
+const UNS = photo
 const SHOP_BANNERS: Record<string, string> = {
   '': UNS('1501339847302-ac426a4a7cbb'),
   'ca-phe-hat': '/static/products/arabica-son-la.jpg',

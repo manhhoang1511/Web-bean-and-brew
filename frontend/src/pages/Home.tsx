@@ -13,12 +13,13 @@ import {
 import { formatVND } from '../lib/format'
 import { useDocumentTitle } from '../lib/hooks'
 import { useScrollProgress } from '../lib/animations'
+import { photo } from '../lib/media'
 
 /**
  * Trang chủ = GIỚI THIỆU cửa hàng & sản phẩm (không có lưới mua hàng).
  * Khách bấm "Cửa hàng" / "Vào cửa hàng" để sang /shop chọn và mua.
  */
-const STORY_IMG = 'https://images.unsplash.com/photo-1442512595331-e89e73853f31?w=1200&q=80&auto=format&fit=crop'
+const STORY_IMG = photo('1442512595331-e89e73853f31')
 const MARQUEE = ['Rang mới mỗi tuần', 'Arabica Cầu Đất', 'Robusta Buôn Ma Thuột', 'Pha tại quán', 'Miễn phí ship từ 500k',
   'Tùy chỉnh đá · đường · topping', 'Specialty Ethiopia', 'Trợ lý AI tư vấn 24/7']
 

@@ -12,7 +12,8 @@ from app.security import hash_password
 from app.services import build_search_text, recalc_rating, resolve_line_options
 from app.utils import slugify
 
-IMG = "https://images.unsplash.com/photo-{}?w=800&q=80&auto=format&fit=crop"
+# Ảnh Unsplash đã tải sẵn về static/media/u -> chạy demo không cần mạng
+IMG = "/static/media/u/{}.jpg"
 
 CATEGORIES = [
     ("Cà phê hạt", "Hạt rang xay tươi mỗi tuần", "🫘"),

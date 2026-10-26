@@ -3,8 +3,9 @@ import { Link } from 'react-router-dom'
 import { ArrowDown, ArrowUpRight } from 'lucide-react'
 import { prefersReducedMotion, useMagnetic, useScrollProgress } from '../../lib/animations'
 import type { CoffeeScene } from '../three/CoffeeScene'
+import { photo } from '../../lib/media'
 
-const FALLBACK_IMG = 'https://images.unsplash.com/photo-1497515114629-f71d768fd07c?w=1600&q=80&auto=format&fit=crop'
+const FALLBACK_IMG = photo('1497515114629-f71d768fd07c')
 
 /** Màu nền cho từng chương (nội suy theo tiến độ cuộn) – kiểu Dogstudio */
 const BG = [[18, 13, 10], [84, 47, 22], [14, 20, 24]]

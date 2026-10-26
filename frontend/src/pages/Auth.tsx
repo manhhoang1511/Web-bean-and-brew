@@ -8,8 +8,9 @@ import { Logo } from '../components/Layout'
 import { Spinner } from '../components/ui'
 import { useAuth } from '../store/auth'
 import { useDocumentTitle } from '../lib/hooks'
+import { photo } from '../lib/media'
 
-const SIDE_IMG = 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=1000&q=80&auto=format&fit=crop'
+const SIDE_IMG = photo('1495474472287-4d71bcdd2085')
 
 /** Khung trang đăng nhập/đăng ký: nửa trái tối kiểu tạp chí (đồng bộ trang chủ), nửa phải là form */
 function AuthShell({ title, subtitle, children }: { title: string; subtitle: React.ReactNode; children: React.ReactNode }) {

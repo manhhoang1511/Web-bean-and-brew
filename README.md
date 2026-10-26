@@ -119,7 +119,8 @@ cd backend && .venv\Scripts\python -m pytest -q
 5. **Không tin tuyệt đối vào AI**: mọi hành động AI yêu cầu đều được server kiểm tra lại
 6. Realtime bằng SSE (đơn giản hơn WebSocket vì chỉ cần một chiều server → client)
 7. Dark mode bằng cách đổi biến màu CSS, không phải sửa từng component
-8. 19 test pytest; lịch sử Git ghi lại từng giai đoạn làm việc với AI
+8. 22 test pytest; lịch sử Git ghi lại từng giai đoạn làm việc với AI
+9. **Chạy được khi không có mạng**: ảnh, video, phông chữ, mã QR đều nằm trong dự án; chatbot tự chuyển sang chế độ trả lời offline (chỉ phần gọi Gemini/OpenAI cần Internet)
 
 📖 Tài liệu thêm: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) (kiến trúc, luồng dữ liệu, câu hỏi vấn đáp), [docs/VIBE_CODING.md](docs/VIBE_CODING.md) (quy trình làm việc với AI và các lỗi đã phát hiện).
 

@@ -212,7 +212,7 @@ async def stream_gemini(system: str, messages: list[ChatMessage]) -> AsyncIterat
         "tools": [{"functionDeclarations": [tool]}],
         "generationConfig": {"temperature": 0.6, "maxOutputTokens": 1024},
     }
-    async with httpx.AsyncClient(timeout=httpx.Timeout(45, connect=10)) as client:
+    async with httpx.AsyncClient(timeout=httpx.Timeout(45, connect=5)) as client:
         async with client.stream("POST", url, json=body, headers={"x-goog-api-key": settings.GEMINI_API_KEY}) as r:
             if r.status_code != 200:
                 raise RuntimeError(f"Gemini {r.status_code}: {(await r.aread())[:300]!r}")
@@ -249,7 +249,7 @@ async def stream_openai(system: str, messages: list[ChatMessage]) -> AsyncIterat
         "stream": True,
     }
     calls: dict[int, str] = {}  # tool call arguments đến theo từng mảnh -> ghép lại
-    async with httpx.AsyncClient(timeout=httpx.Timeout(45, connect=10)) as client:
+    async with httpx.AsyncClient(timeout=httpx.Timeout(45, connect=5)) as client:
         async with client.stream("POST", "https://api.openai.com/v1/chat/completions", json=body,
                                  headers={"Authorization": f"Bearer {settings.OPENAI_API_KEY}"}) as r:
             if r.status_code != 200:
