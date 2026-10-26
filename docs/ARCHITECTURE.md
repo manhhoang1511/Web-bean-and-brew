@@ -187,6 +187,14 @@ AdminLayout: toast + âm báo, badge số đơn chờ; store.version++ → Dashb
 - Video chỉ tải/phát khi lọt vào màn hình (`IntersectionObserver` → `play()/pause()`, `preload="none"`) để tiết kiệm băng thông.
 - Pháo giấy: `<canvas>` + vật lý đơn giản (vận tốc, trọng lực, lực cản), tự hủy sau 3 giây.
 
+### Cảnh 3D (`components/three/CoffeeScene.ts`, `components/home/Immersive3D.tsx`)
+- **Không dùng file mô hình**: tách & đĩa = `LatheGeometry` (xoay đường biên dạng quanh trục); hạt = hình cầu bóp thành elip rồi **dịch đỉnh** tạo rãnh chữ S; 90 hạt vẽ bằng **`InstancedMesh`** (1 lần gọi vẽ cho cả 90 hạt); latte art vẽ bằng Canvas 2D làm texture; khói & bụi là `Points` + **shader GLSL** (vị trí tính trên GPU).
+- Ánh sáng: môi trường `RoomEnvironment` (PMREM) cho phản chiếu sứ + đèn chính ấm + đèn viền caramel; tone mapping ACES.
+- **Điều khiển bằng cuộn**: section cao 320vh, phần trong `sticky`; `useScrollProgress` truyền tiến độ 0..1 → camera/tách/hạt nội suy theo 3 chương (`smoothstep`). Nội suy theo **thời gian** `1 - e^(-dt·k)` để máy nhanh hay chậm đều khớp vị trí cuộn. Nền section đổi màu bằng nội suy RGB.
+- **Hiệu năng**: three.js nạp động (`import()`, chunk riêng ~124KB gzip) chỉ ở trang chủ; vòng render chỉ chạy khi section hiện trên màn hình (IntersectionObserver); `devicePixelRatio ≤ 2`; vector tạm dùng lại mỗi khung hình; giải phóng geometry/material/texture khi rời trang; lỗi WebGL → ảnh tĩnh.
+- **Cuộn mượt (Lenis)** chỉ bật ở trang chủ, tắt khi `prefers-reduced-motion` hoặc màn cảm ứng; popup video gọi `lenis.stop()`; vùng cuộn riêng (khung chat) gắn `data-lenis-prevent`.
+- Header tự chuyển kính mờ khi nằm trên vùng tối (`[data-overlay-header]`).
+
 ## 4b. Triển khai (Docker)
 `docker compose up --build` → nginx (frontend) ở cổng 8080 phục vụ file tĩnh đã build, chuyển `/api` và `/uploads` sang container FastAPI; CSDL SQLite và ảnh upload nằm trong volume nên không mất khi khởi động lại.
 

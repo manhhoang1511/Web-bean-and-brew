@@ -80,6 +80,18 @@ Tài liệu ghi lại cách dự án được xây dựng theo phương pháp "V
 | Tiêu đề tách chữ bị dính liền | Ảnh chụp | Dấu cách ở cuối `inline-block` bị bỏ | Đưa dấu cách ra ngoài phần tử |
 | Lưới danh mục trống 1 ô | Ảnh chụp | 7 thẻ trong lưới 4 cột | 2 thẻ cuối chiếm 2 cột |
 
+### Vòng 6 – "Áp dụng phong cách Active Theory / Dogstudio / Aristide Benoist"
+
+Quyết định: lấy **Dogstudio** làm xương sống (vật thể 3D + kể chuyện theo cuộn), thêm **Aristide Benoist** (chữ tạp chí, cuộn mượt, ảnh gợn nước), chỉ mượn **hạt sáng** của Active Theory; chỉ áp dụng ở trang giới thiệu để trang mua hàng vẫn nhanh.
+
+| Vấn đề | Phát hiện bằng | Nguyên nhân | Sửa |
+|---|---|---|---|
+| Chữ chương 2–3 nằm giữa đè lên tách trắng | Ảnh chụp | Bố cục giữa | Tách & chữ đổi bên mỗi chương + lớp tối phía có chữ |
+| Hiệu ứng đổ hạt trễ so với vị trí cuộn | Ảnh chụp trên máy chậm | Nội suy theo khung hình | Nội suy theo thời gian `1 - e^(-dt·k)` |
+| HeroSlider bị lệch khi không còn ở đầu trang | Ảnh chụp | Parallax dùng `scrollY` của cả trang | Dùng quãng đã cuộn qua chính phần tử |
+| Lỗi TS1294 | `tsc` | `erasableSyntaxOnly` cấm `constructor(private x)` | Khai báo thuộc tính tường minh |
+| Chữ khó đọc trên mobile | Ảnh chụp 390px | Tách nằm sau chữ | Mobile đưa tách lên nửa trên |
+
 ## 4. Lịch sử Git
 Mỗi giai đoạn là một commit riêng (`git log --oneline`): MVP → sửa ảnh → sửa quy tắc nghiệp vụ → biến thể + wishlist → nâng cấp chatbot → admin/UX → tài liệu. Thông điệp commit ghi rõ *làm gì và vì sao*, có thể dùng khi trình bày quy trình.
 

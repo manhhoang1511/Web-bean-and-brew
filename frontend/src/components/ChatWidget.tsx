@@ -139,7 +139,7 @@ export default function ChatWidget() {
             </button>
           </div>
 
-          <div className="scrollbar-thin flex-1 space-y-3 overflow-y-auto p-4">
+          <div className="scrollbar-thin flex-1 space-y-3 overflow-y-auto p-4" data-lenis-prevent>
             {messages.map((m, i) => (
               <div key={i} className={`flex flex-col ${m.role === 'user' ? 'items-end' : 'items-start'}`}>
                 {(m.content || m.role === 'user') && (

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { ArrowUp } from 'lucide-react'
 import { prefersReducedMotion } from '../../lib/animations'
+import { getLenis } from '../../lib/smoothScroll'
 
 /** Màn hình chào lần đầu mở trang trong phiên: logo + ly cà phê đầy dần, rồi kéo màn lên */
 export function Preloader() {
@@ -123,7 +124,7 @@ export function BackToTop() {
   const C = 2 * Math.PI * 20
   const show = p > 0.12
   return (
-    <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} aria-label="Về đầu trang"
+    <button onClick={() => { const l = getLenis(); if (l) l.scrollTo(0); else window.scrollTo({ top: 0, behavior: 'smooth' }) }} aria-label="Về đầu trang"
       className={`fixed bottom-24 right-6 z-30 flex h-12 w-12 items-center justify-center rounded-full bg-surface text-coffee-800 shadow-lg transition duration-500 hover:-translate-y-1 hover:text-caramel-600 ${show ? 'opacity-100' : 'pointer-events-none translate-y-6 opacity-0'}`}>
       <svg className="absolute inset-0 -rotate-90" viewBox="0 0 48 48" aria-hidden>
         <circle cx="24" cy="24" r="20" fill="none" stroke="var(--color-coffee-100)" strokeWidth="3" />

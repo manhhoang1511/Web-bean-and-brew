@@ -71,6 +71,11 @@ cd backend && .venv\Scripts\python -m pytest -q
 
 ## ✅ Chức năng
 
+### Trải nghiệm 3D kiểu Dogstudio + Aristide Benoist (trang chủ)
+- **Tách cà phê 3D dựng hoàn toàn bằng code (three.js)**: sứ bóng phản chiếu, latte art, 90 hạt cà phê có rãnh, khói & bụi sáng bằng shader GPU; xoay theo chuột
+- **Kể chuyện theo cuộn (3 chương)**: camera bay quanh tách, hạt đổ xoáy vào tách, nền đổi màu, chữ lớn kiểu tạp chí trượt lên từng dòng, tách & chữ đổi bên mỗi chương
+- Cuộn mượt có quán tính (Lenis), hiệu ứng ảnh gợn như mặt nước khi rê chuột, film grain; three.js chỉ tải ở trang chủ, có ảnh dự phòng khi máy không hỗ trợ WebGL
+
 ### Trang chủ (giới thiệu) và Cửa hàng (mua sắm) tách riêng
 - **Trang chủ** chỉ giới thiệu: hero trình chiếu, đoạn giới thiệu sáng dần theo cuộn, **video giới thiệu** (phóng to toàn màn hình khi cuộn, bấm để xem đầy đủ), **"Hành trình hạt cà phê" cuộn ngang** qua 4 video, khám phá danh mục, menu đồ uống, 2 hàng sản phẩm tiêu biểu chạy ngược chiều, câu chuyện, cảm nhận khách hàng, lời mời "Vào cửa hàng"
 - **Cửa hàng** (`/shop`): banner theo danh mục, nút lọc nhanh, bộ lọc giá, lưới sản phẩm để chọn và mua

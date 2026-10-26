@@ -153,16 +153,22 @@ function Header() {
   const { pathname, search } = useLocation()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [scrollY, setScrollY] = useState(0)
+  const [overDark, setOverDark] = useState(false)
   useEffect(() => {
-    const onScroll = () => setScrollY(window.scrollY)
+    // Header đang nằm trên vùng nền tối (section có data-overlay-header) -> dùng giao diện kính mờ chữ trắng
+    const onScroll = () => {
+      setScrollY(window.scrollY)
+      const zone = document.querySelector('[data-overlay-header]')
+      setOverDark(!!zone && zone.getBoundingClientRect().bottom > 90)
+    }
     onScroll()
+    const t = setTimeout(onScroll, 50) // trang mới render xong mới có vùng tối
     window.addEventListener('scroll', onScroll, { passive: true })
-    return () => window.removeEventListener('scroll', onScroll)
-  }, [])
+    return () => { clearTimeout(t); window.removeEventListener('scroll', onScroll) }
+  }, [pathname])
 
   const isHome = pathname === '/'
-  // Trang chủ, còn ở vùng hero -> header trong suốt dạng kính mờ nằm đè lên ảnh
-  const overlay = isHome && scrollY < 420
+  const overlay = isHome && overDark
   const scrolled = scrollY > 8
 
   const links: [string, string][] = [
@@ -315,6 +321,15 @@ export default function Layout() {
       <Preloader />
       <CustomCursor />
       <ScrollProgress />
+      {/* Bộ lọc SVG cho hiệu ứng ảnh gợn như mặt nước (.liquid:hover img) */}
+      <svg width="0" height="0" className="absolute" aria-hidden>
+        <filter id="liquid">
+          <feTurbulence type="fractalNoise" baseFrequency="0.012 0.03" numOctaves="2" seed="3">
+            <animate attributeName="baseFrequency" dur="7s" values="0.012 0.03;0.02 0.05;0.012 0.03" repeatCount="indefinite" />
+          </feTurbulence>
+          <feDisplacementMap in="SourceGraphic" scale="24" />
+        </filter>
+      </svg>
       <Header />
       <main className="flex-1">
         {/* key đổi theo đường dẫn -> mỗi lần chuyển trang chạy lại hiệu ứng xuất hiện */}

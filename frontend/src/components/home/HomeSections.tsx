@@ -6,6 +6,7 @@ import type { Category, Page, Product } from '../../api/types'
 import { formatVND } from '../../lib/format'
 import { useMagnetic, useScrollProgress } from '../../lib/animations'
 import Reveal from '../Reveal'
+import { getLenis } from '../../lib/smoothScroll'
 
 const WM = 'https://upload.wikimedia.org/wikipedia/commons/'
 const UNS = (id: string, w = 1200) => `https://images.unsplash.com/photo-${id}?w=${w}&q=80&auto=format&fit=crop`
@@ -141,7 +142,8 @@ export function VideoShowcase() {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false)
     document.addEventListener('keydown', onKey)
     document.body.style.overflow = 'hidden'
-    return () => { document.removeEventListener('keydown', onKey); document.body.style.overflow = '' }
+    getLenis()?.stop() // tạm dừng cuộn mượt khi đang xem video
+    return () => { document.removeEventListener('keydown', onKey); document.body.style.overflow = ''; getLenis()?.start() }
   }, [open])
   return (
     <section className="mt-28">
@@ -206,7 +208,7 @@ export function JourneyScroll() {
         <div className="container-page">
           <div ref={track} className="flex flex-col gap-6 will-change-transform lg:flex-row lg:gap-8">
             {JOURNEY.map((j, i) => (
-              <Reveal key={j.n} delay={i * 80} className="group relative shrink-0 overflow-hidden rounded-3xl bg-espresso-800 lg:h-[62vh] lg:w-[46vw]">
+              <Reveal key={j.n} delay={i * 80} className="liquid group relative shrink-0 overflow-hidden rounded-3xl bg-espresso-800 lg:h-[62vh] lg:w-[46vw]">
                 <div className="relative h-64 overflow-hidden lg:absolute lg:inset-0 lg:h-full">
                   {j.video
                     ? <LazyVideo src={j.video.loop} poster={j.video.poster} className="h-full w-full object-cover transition duration-1000 group-hover:scale-105" />
@@ -248,7 +250,7 @@ export function ExploreCategories() {
       <div className="grid auto-rows-[180px] grid-cols-2 gap-4 sm:auto-rows-[220px] lg:grid-cols-4">
         {cats.map((c, i) => (
           <Reveal key={c.id} delay={i * 70} effect="zoom" className={i === 0 ? 'col-span-2 row-span-2' : i >= 5 ? 'col-span-2' : ''}>
-            <Link to={`/shop?category=${c.slug}`} className="group relative block h-full overflow-hidden rounded-3xl">
+            <Link to={`/shop?category=${c.slug}`} className="liquid group relative block h-full overflow-hidden rounded-3xl">
               <img src={imageUrl(CATEGORY_IMAGES[c.slug])} alt={c.name} loading="lazy" className="h-full w-full object-cover transition duration-700 group-hover:scale-110" />
               <div className="absolute inset-0 bg-gradient-to-t from-espresso-900/85 via-espresso-900/20 to-transparent transition group-hover:from-espresso-900/95" />
               <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 p-5 text-latte-50">

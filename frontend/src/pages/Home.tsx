@@ -5,6 +5,8 @@ import { api, imageUrl } from '../api/client'
 import type { Page, Product } from '../api/types'
 import Reveal from '../components/Reveal'
 import HeroSlider from '../components/HeroSlider'
+import Immersive3D from '../components/home/Immersive3D'
+import { useSmoothScroll } from '../lib/smoothScroll'
 import {
   AboutIntro, ExploreCategories, FinalCTA, JourneyScroll, ProductMarquee, SectionHeader, Testimonials, VideoShowcase,
 } from '../components/home/HomeSections'
@@ -77,7 +79,7 @@ function DrinksSection() {
       <SectionHeader eyebrow="Pha tại quán" title="Menu đồ uống theo gu của bạn" link="/shop?category=do-uong-pha-che" linkText="Xem cả menu" />
       <div className="grid gap-6 lg:grid-cols-5">
         <Reveal effect="left" className="lg:col-span-2">
-          <Link to={`/products/${hero.slug}`} className="group relative block h-full min-h-96 overflow-hidden rounded-3xl">
+          <Link to={`/products/${hero.slug}`} className="liquid group relative block h-full min-h-96 overflow-hidden rounded-3xl">
             <img src={imageUrl(hero.image_url)} alt={hero.name} className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-110" />
             <div className="absolute inset-0 bg-gradient-to-t from-espresso-900/90 via-espresso-900/30 to-transparent" />
             <div className="relative flex h-full flex-col justify-end p-6 text-latte-50">
@@ -99,7 +101,7 @@ function DrinksSection() {
         <div className="grid grid-cols-2 gap-4 sm:gap-6 lg:col-span-3 lg:grid-cols-3">
           {rest.slice(0, 6).map((p, i) => (
             <Reveal key={p.id} delay={i * 80} effect="zoom">
-              <Link to={`/products/${p.slug}`} className="group card block overflow-hidden transition duration-500 hover:-translate-y-1.5 hover:shadow-xl">
+              <Link to={`/products/${p.slug}`} className="liquid group card block overflow-hidden transition duration-500 hover:-translate-y-1.5 hover:shadow-xl">
                 <div className="relative aspect-[4/3] overflow-hidden">
                   <img src={imageUrl(p.image_url)} alt={p.name} loading="lazy" className="h-full w-full object-cover transition duration-700 group-hover:scale-110 group-hover:rotate-1" />
                   <span className="absolute bottom-2 right-2 rounded-full bg-surface/90 px-2.5 py-1 text-xs font-bold text-coffee-900 backdrop-blur transition group-hover:bg-caramel-500 group-hover:text-white">
@@ -154,9 +156,11 @@ function Story() {
 
 export default function Home() {
   useDocumentTitle('')
+  useSmoothScroll() // cuộn mượt có quán tính chỉ ở trang giới thiệu
   return (
     <>
-      <HeroSlider />
+      <Immersive3D />
+      <div className="mt-3"><HeroSlider /></div>
       <Usp />
       <div className="mt-16"><Marquee /></div>
       <AboutIntro />

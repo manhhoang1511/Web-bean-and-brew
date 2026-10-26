@@ -66,7 +66,8 @@ export function useParallax<T extends HTMLElement>() {
       my += (ty - my) * 0.08
       el.style.setProperty('--mx', mx.toFixed(4))
       el.style.setProperty('--my', my.toFixed(4))
-      el.style.setProperty('--sy', `${Math.min(window.scrollY, 1200)}px`)
+      // Quãng đã cuộn QUA chính phần tử (không dùng scrollY của cả trang -> đặt ở đâu cũng đúng)
+      el.style.setProperty('--sy', `${Math.min(Math.max(0, -el.getBoundingClientRect().top), 1200)}px`)
       raf = requestAnimationFrame(loop)
     }
     el.addEventListener('pointermove', onMove)
