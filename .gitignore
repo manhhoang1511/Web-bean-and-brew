@@ -12,3 +12,6 @@ backend/uploads/*
 node_modules/
 frontend/dist/
 *.log
+
+# Tài liệu chuẩn bị thuyết trình (chỉ dùng cá nhân, không đưa lên GitHub)
+docs/THUYET_TRINH.md
