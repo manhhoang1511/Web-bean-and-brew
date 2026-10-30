@@ -19,7 +19,7 @@ export function Preloader() {
   }, [state])
   if (state === 'done') return null
   return (
-    <div aria-hidden className={`fixed inset-0 z-[300] flex flex-col items-center justify-center bg-espresso-900 transition-transform duration-700 ease-[cubic-bezier(.7,0,.3,1)] ${state === 'leave' ? '-translate-y-full' : ''}`}>
+    <div aria-hidden data-preloader className={`fixed inset-0 z-[300] flex flex-col items-center justify-center bg-espresso-900 transition-transform duration-700 ease-[cubic-bezier(.7,0,.3,1)] ${state === 'leave' ? '-translate-y-full' : ''}`}>
       {/* Ly cà phê đầy dần */}
       <div className="relative h-20 w-16">
         <div className="absolute inset-x-0 bottom-0 h-16 overflow-hidden rounded-b-[1.4rem] rounded-t-md border-[3px] border-latte-200">

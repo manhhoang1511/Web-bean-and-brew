@@ -196,6 +196,29 @@
   animation: grain-shift .9s steps(5) infinite;
 }
 
+/* Chữ ánh vàng kim chạy qua (cụm in nghiêng ở tiêu đề trang chủ).
+   padding-top nới hộp để nền gradient phủ cả dấu tiếng Việt (background-clip:text chỉ tô trong hộp) */
+@keyframes gold-sweep { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+@utility shimmer-gold {
+  background: linear-gradient(100deg, #d08a3c 0%, #f2b46d 30%, #fff3dc 45%, #f2b46d 60%, #c96f2a 100%);
+  background-size: 250% 100%;
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  padding: .22em .06em 0; margin: -.22em -.06em 0;
+  animation: gold-sweep 7s linear infinite;
+}
+
+/* Mảng màu loang trôi chậm phía sau cảnh 3D */
+@keyframes aurora-drift {
+  0% { transform: translate(-50%, -50%) scale(1); }
+  50% { transform: translate(-38%, -62%) scale(1.25); }
+  100% { transform: translate(-60%, -40%) scale(.9); }
+}
+.aurora span {
+  position: absolute; width: 46vmax; height: 46vmax; border-radius: 9999px;
+  opacity: .22; filter: blur(110px); mix-blend-mode: screen;
+  animation: aurora-drift 18s ease-in-out infinite alternate;
+}
+
 /* Ảnh gợn như mặt nước khi rê chuột – bộ lọc SVG #liquid khai báo trong Layout */
 .liquid img { transition: transform .9s cubic-bezier(.16,1,.3,1), filter .3s; }
 .liquid:hover img { filter: url(#liquid); }

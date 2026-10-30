@@ -1,22 +1,48 @@
 /**
- * Cảnh 3D trang chủ (lấy cảm hứng Dogstudio): tách cà phê sứ + hạt cà phê bay + khói + bụi sáng.
+ * Cảnh 3D trang chủ (lấy cảm hứng Dogstudio): tách cà phê sứ + hạt cà phê + khói + bụi sáng nhiều màu.
  * Toàn bộ hình khối dựng bằng code (không cần file .glb):
- *  - Tách & đĩa: LatheGeometry (xoay 1 đường biên dạng quanh trục, giống tiện gốm)
- *  - Hạt cà phê: hình elip + khắc rãnh chữ S bằng cách dịch đỉnh (vertex) -> InstancedMesh ~28 hạt,
- *    rải có kiểm soát: tránh vùng chữ và khoảng trước tách; sương mù (fog) làm hạt xa chìm vào nền
- *  - Mặt latte: vẽ bằng Canvas 2D rồi làm texture
- *  - Khói: dải mặt phẳng + nhiễu fbm trong fragment shader (mềm như khói thật, không phải chấm)
- *  - Bụi sáng: Points + ShaderMaterial chạy trên GPU
- * Tiến độ cuộn (0..1) điều khiển camera, vị trí tách và quỹ đạo hạt theo 3 "chương".
+ *  - Tách & đĩa: đường biên dạng làm mềm bằng spline rồi xoay quanh trục (LatheGeometry, như tiện gốm);
+ *    quai là ống (TubeGeometry) chạy theo đường cong; viền vàng kim ở miệng tách & mép đĩa
+ *  - "Studio chụp sản phẩm" ảo: các tấm đèn phát sáng -> PMREM làm môi trường phản chiếu,
+ *    nên sứ có vệt sáng dài như ảnh quảng cáo (đây là thứ làm sứ khác nhựa) + bóng đổ thật (shadow map)
+ *  - Hạt cà phê: hình elip khắc rãnh chữ S (dịch đỉnh) -> InstancedMesh, lớp phủ bóng như hạt mới rang
+ *  - Mặt latte: vẽ bằng Canvas 2D; khói: dải mặt phẳng + nhiễu fbm trong shader; bụi sáng: Points nhiều màu
+ * Chuyển động: màn mở đầu (tách bay lên + rót đầy + hạt bung ra), bấm vào tách (xoay + hạt văng),
+ * và tiến độ cuộn (0..1) điều khiển camera, vị trí tách, quỹ đạo hạt theo 3 "chương".
  */
 import * as THREE from 'three'
-import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 
+const clamp01 = (x: number) => Math.min(1, Math.max(0, x))
 const smooth = (a: number, b: number, x: number) => {
-  const t = Math.min(1, Math.max(0, (x - a) / (b - a)))
+  const t = clamp01((x - a) / (b - a))
   return t * t * (3 - 2 * t)
 }
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t
+const easeOutCubic = (t: number) => 1 - Math.pow(1 - clamp01(t), 3)
+const easeOutBack = (t: number) => {
+  const x = clamp01(t), c = 1.4
+  return 1 + (c + 1) * Math.pow(x - 1, 3) + c * Math.pow(x - 1, 2)
+}
+
+/** Đường biên dạng (bán kính, độ cao) -> làm mềm bằng spline để mép tách tròn trịa, phản chiếu mượt */
+const profile = (pts: number[][], n: number) => new THREE.SplineCurve(pts.map(([x, y]) => new THREE.Vector2(x, y))).getPoints(n)
+
+const CUP_PROFILE = [
+  [0, 0], [0.42, 0], [0.5, 0.02], [0.545, 0.08], [0.58, 0.25], [0.66, 0.55], [0.74, 0.85], [0.8, 1.06], [0.815, 1.11],
+  [0.8, 1.137], [0.775, 1.12], [0.765, 1.06], [0.7, 0.8], [0.62, 0.5], [0.55, 0.24], [0.48, 0.15], [0, 0.13],
+]
+/** Bán kính lòng tách theo độ cao (để mặt cà phê luôn khít thành tách khi "rót" dâng lên) */
+const INNER = [[0.15, 0.48], [0.24, 0.55], [0.5, 0.62], [0.8, 0.7], [1.06, 0.765]]
+const innerRadius = (y: number) => {
+  for (let i = 1; i < INNER.length; i++) {
+    if (y <= INNER[i][0]) {
+      const [y0, r0] = INNER[i - 1], [y1, r1] = INNER[i]
+      return lerp(r0, r1, clamp01((y - y0) / (y1 - y0)))
+    }
+  }
+  return INNER[INNER.length - 1][1]
+}
+const LIQUID_FULL = 0.98
 
 function latteTexture() {
   const s = 512
@@ -24,11 +50,18 @@ function latteTexture() {
   c.width = c.height = s
   const g = c.getContext('2d')!
   const grad = g.createRadialGradient(s / 2, s / 2, 20, s / 2, s / 2, s / 2)
-  grad.addColorStop(0, '#c08550')
-  grad.addColorStop(0.7, '#8a5530')
+  grad.addColorStop(0, '#c98f58')
+  grad.addColorStop(0.65, '#94592f')
   grad.addColorStop(1, '#4a2a16')
   g.fillStyle = grad
   g.fillRect(0, 0, s, s)
+  // Lớp crema lốm đốm như bọt thật
+  for (let i = 0; i < 900; i++) {
+    g.fillStyle = `rgba(${Math.random() < 0.5 ? '255,226,190' : '90,50,25'},${0.04 + Math.random() * 0.06})`
+    g.beginPath()
+    g.arc(Math.random() * s, Math.random() * s, 1 + Math.random() * 3, 0, Math.PI * 2)
+    g.fill()
+  }
   // Latte art hình trái tim: lớp bọt sữa trắng + viền nâu bên trong + vệt kéo xuyên tim (như rót thật)
   const heart = (cx: number, cy: number, w: number) => {
     g.beginPath()
@@ -55,6 +88,48 @@ function latteTexture() {
   g.stroke()
   const tex = new THREE.CanvasTexture(c)
   tex.colorSpace = THREE.SRGBColorSpace
+  return tex
+}
+
+/** Bóng đổ mềm dưới đĩa (gradient tròn) – mặt đất vô hình nên dùng texture thay vì shadow map */
+function blobShadowTexture() {
+  const c = document.createElement('canvas')
+  c.width = c.height = 128
+  const g = c.getContext('2d')!
+  const grad = g.createRadialGradient(64, 64, 0, 64, 64, 64)
+  grad.addColorStop(0, 'rgba(0,0,0,0.6)')
+  grad.addColorStop(0.55, 'rgba(0,0,0,0.25)')
+  grad.addColorStop(1, 'rgba(0,0,0,0)')
+  g.fillStyle = grad
+  g.fillRect(0, 0, 128, 128)
+  return new THREE.CanvasTexture(c)
+}
+
+/**
+ * "Studio chụp ảnh sản phẩm" ảo: phòng tối + các tấm đèn phát sáng (giá trị màu > 1 = đèn mạnh).
+ * PMREM biến cảnh này thành môi trường phản chiếu -> sứ bóng hiện các vệt sáng dài giống ảnh quảng cáo.
+ */
+function studioEnvironment(renderer: THREE.WebGLRenderer) {
+  const env = new THREE.Scene()
+  env.background = new THREE.Color(0.02, 0.016, 0.014)
+  const geo = new THREE.PlaneGeometry(1, 1)
+  const panel = (rgb: [number, number, number], w: number, h: number, pos: [number, number, number]) => {
+    const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: new THREE.Color(...rgb), side: THREE.DoubleSide }))
+    m.scale.set(w, h, 1)
+    m.position.set(...pos)
+    m.lookAt(0, 0, 0)
+    env.add(m)
+  }
+  panel([6, 5.3, 4.5], 5, 3.5, [-4, 5, 4])     // softbox chính, ánh ấm, trên-trái
+  panel([5, 2.4, 0.9], 1.1, 7, [6, 1, -3])     // dải đèn viền cam bên phải
+  panel([3.2, 1.1, 1.9], 0.9, 6, [-6, 1, -2])  // dải đèn hồng bên trái -> mép sứ ánh hồng
+  panel([1.3, 1.2, 1.1], 9, 1.2, [0, -3.5, 5]) // tấm hắt sáng phía dưới
+  panel([8, 7.6, 7], 1.2, 1.2, [3, 3.5, 6])    // đèn chấm nhỏ -> điểm sáng lấp lánh
+  const pmrem = new THREE.PMREMGenerator(renderer)
+  const tex = pmrem.fromScene(env, 0.015).texture
+  env.traverse((o) => ((o as THREE.Mesh).material as THREE.Material | undefined)?.dispose())
+  geo.dispose()
+  pmrem.dispose()
   return tex
 }
 
@@ -111,7 +186,7 @@ const STEAM_FRAG = /* glsl */ `
     gl_FragColor = vec4(1.0, 0.96, 0.9, smoke * uOpacity * 0.6);
   }`
 const DUST_VERT = /* glsl */ `
-  uniform float uTime; uniform vec2 uMouse; attribute float aSeed; varying float vAlpha;
+  uniform float uTime; uniform vec2 uMouse; attribute float aSeed; varying float vAlpha; varying vec3 vColor; varying float vBokeh;
   void main() {
     vec3 pos = position;
     pos.y += sin(uTime * 0.3 + aSeed * 30.0) * 0.25;
@@ -120,16 +195,21 @@ const DUST_VERT = /* glsl */ `
     vec2 diff = pos.xy - uMouse * vec2(5.0, 3.0);
     float f = smoothstep(1.6, 0.0, length(diff));
     pos.xy += normalize(diff + 0.0001) * f * 0.9;
-    vAlpha = 0.25 + 0.75 * fract(aSeed * 13.7);
+    // Bảng màu ấm rực rỡ: vàng kim / cam / hồng đào
+    float k = fract(aSeed * 7.31);
+    vColor = k < 0.45 ? vec3(1.0, 0.78, 0.42) : k < 0.8 ? vec3(1.0, 0.52, 0.22) : vec3(1.0, 0.45, 0.6);
+    vBokeh = step(0.94, fract(aSeed * 3.17)); // ~6% là đốm "bokeh" to, mờ như ống kính mở khẩu
+    vAlpha = (0.25 + 0.75 * fract(aSeed * 13.7)) * (0.7 + 0.3 * sin(uTime * 1.5 + aSeed * 40.0)) * (1.0 - vBokeh * 0.65);
     vec4 mv = modelViewMatrix * vec4(pos, 1.0);
-    gl_PointSize = (6.0 + aSeed * 10.0) / -mv.z;
+    gl_PointSize = (6.0 + aSeed * 10.0 + vBokeh * 70.0) / -mv.z;
     gl_Position = projectionMatrix * mv;
   }`
 const DUST_FRAG = /* glsl */ `
-  varying float vAlpha;
+  varying float vAlpha; varying vec3 vColor; varying float vBokeh;
   void main() {
     float d = length(gl_PointCoord - 0.5);
-    gl_FragColor = vec4(0.95, 0.72, 0.45, smoothstep(0.5, 0.1, d) * vAlpha * 0.8);
+    float disc = mix(smoothstep(0.5, 0.1, d), smoothstep(0.5, 0.42, d) * 0.6 + smoothstep(0.42, 0.0, d) * 0.35, vBokeh);
+    gl_FragColor = vec4(vColor, disc * vAlpha * 0.8);
   }`
 
 interface BeanData { base: THREE.Vector3; a: number; h: number; speed: number; axis: THREE.Vector3; spin: number; scale: number; depth: number }
@@ -139,10 +219,12 @@ export class CoffeeScene {
   private scene = new THREE.Scene()
   private camera = new THREE.PerspectiveCamera(35, 1, 0.1, 100)
   private cup = new THREE.Group()
+  private liquid!: THREE.Mesh
   private beans: THREE.InstancedMesh
   private beanData: BeanData[] = []
   private steam: THREE.Mesh
   private dust: THREE.Points
+  private key: THREE.DirectionalLight
   private clock = new THREE.Clock()
   private raf = 0
   private running = false
@@ -153,9 +235,17 @@ export class CoffeeScene {
   private dummy = new THREE.Object3D()
   private tmpA = new THREE.Vector3() // vector tạm dùng lại mỗi khung hình (tránh tạo rác cho GC)
   private tmpB = new THREE.Vector3()
+  private raycaster = new THREE.Raycaster()
+  private ndc = new THREE.Vector2()
   private mobile = false
   private fog = new THREE.Fog('#120d0a', 7, 14)
   private disposables: { dispose: () => void }[] = []
+  private rotY = -0.55
+  /** Đồng hồ màn mở đầu (giây); 99 = đã xong, playIntro() đặt lại */
+  private introT = 99
+  private introDelay = 0
+  /** Thời điểm bấm vào tách (giây theo đồng hồ cảnh); <0 = không có hiệu ứng */
+  private burstAt = -1
 
   private canvas: HTMLCanvasElement
 
@@ -164,26 +254,32 @@ export class CoffeeScene {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: 'high-performance' })
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping
-    this.renderer.toneMappingExposure = 0.95
+    this.renderer.toneMappingExposure = 1.0
+    this.renderer.shadowMap.enabled = true
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap
     this.scene.fog = this.fog // hạt ở xa chìm dần vào màu nền -> chiều sâu như ống kính máy ảnh
 
-    // Môi trường phản chiếu cho sứ bóng
-    const pmrem = new THREE.PMREMGenerator(this.renderer)
-    const envTex = pmrem.fromScene(new RoomEnvironment(), 0.04).texture
+    const envTex = studioEnvironment(this.renderer)
     this.scene.environment = envTex
-    this.disposables.push(envTex, pmrem)
+    this.disposables.push(envTex)
 
-    // Ánh sáng 3 điểm kiểu chụp sản phẩm: đèn chính ấm, đèn viền caramel phía sau, đèn phụ lạnh bên trái
-    this.scene.add(new THREE.HemisphereLight('#ffe9d2', '#2a1a10', 0.45))
-    const key = new THREE.DirectionalLight('#fff1dc', 2.4)
-    key.position.set(-3, 5, 4)
-    this.scene.add(key)
-    const rim = new THREE.DirectionalLight('#e39a4a', 4.2)
-    rim.position.set(3.5, 2.5, -4)
-    this.scene.add(rim)
-    const back = new THREE.DirectionalLight('#ffe2c4', 0.9)
-    back.position.set(-4, 1.5, -3)
-    this.scene.add(back)
+    // Ánh sáng kiểu chụp sản phẩm: đèn chính ấm (đổ bóng) + 2 đèn viền màu cam & hồng tạo mép sáng rực rỡ
+    this.scene.add(new THREE.HemisphereLight('#ffe9d2', '#2a1a10', 0.25))
+    this.key = new THREE.DirectionalLight('#fff2e0', 2.6)
+    this.key.castShadow = true
+    this.key.shadow.mapSize.set(1024, 1024)
+    this.key.shadow.radius = 5
+    this.key.shadow.bias = -0.0004
+    this.key.shadow.normalBias = 0.02
+    Object.assign(this.key.shadow.camera, { left: -3, right: 3, top: 3, bottom: -3, near: 0.5, far: 20 })
+    this.scene.add(this.key, this.key.target)
+    const rimWarm = new THREE.DirectionalLight('#ff9a4a', 3.6)
+    rimWarm.position.set(4, 3, -4)
+    const rimRose = new THREE.DirectionalLight('#ff6f91', 1.3)
+    rimRose.position.set(-4.5, 2, -3)
+    const fill = new THREE.DirectionalLight('#ffd7b0', 0.35)
+    fill.position.set(0, 1, 6)
+    this.scene.add(rimWarm, rimRose, fill)
 
     this.buildCup()
     this.beans = this.buildBeans()
@@ -193,52 +289,68 @@ export class CoffeeScene {
   }
 
   private buildCup() {
-    const ceramic = new THREE.MeshPhysicalMaterial({
-      color: '#efe4d4', roughness: 0.28, clearcoat: 1, clearcoatRoughness: 0.06, sheen: 0.4, sheenColor: new THREE.Color('#ffd9b0'),
-      envMapIntensity: 0.75, side: THREE.DoubleSide,
+    // Sứ men bóng: nhám thấp + lớp phủ clearcoat + chút "sheen" ấm -> bắt sáng studio, không bị nhựa
+    const porcelain = new THREE.MeshPhysicalMaterial({
+      color: '#f7f2ea', roughness: 0.16, clearcoat: 1, clearcoatRoughness: 0.04, ior: 1.5,
+      sheen: 0.25, sheenColor: new THREE.Color('#fff0dd'), sheenRoughness: 0.6, envMapIntensity: 1.15, side: THREE.DoubleSide,
     })
-    const profile = [[0, 0], [0.5, 0], [0.56, 0.04], [0.62, 0.3], [0.72, 0.75], [0.8, 1.08], [0.81, 1.12], [0.77, 1.13],
-      [0.75, 1.08], [0.67, 0.75], [0.57, 0.3], [0.5, 0.14], [0, 0.12]].map(([x, y]) => new THREE.Vector2(x, y))
-    const body = new THREE.Mesh(new THREE.LatheGeometry(profile, 96), ceramic)
+    const gold = new THREE.MeshPhysicalMaterial({ color: '#d9a441', metalness: 1, roughness: 0.22, envMapIntensity: 1.4 })
 
-    const handle = new THREE.Mesh(new THREE.TorusGeometry(0.27, 0.06, 24, 64, Math.PI), ceramic)
-    handle.rotation.z = -Math.PI / 2
-    handle.position.set(0.72, 0.62, 0)
-    handle.scale.set(1, 1.15, 1)
+    const body = new THREE.Mesh(new THREE.LatheGeometry(profile(CUP_PROFILE, 160), 160), porcelain)
 
-    const liquid = new THREE.Mesh(new THREE.CircleGeometry(0.74, 64),
-      new THREE.MeshPhysicalMaterial({ map: latteTexture(), roughness: 0.3, clearcoat: 0.6 }))
-    liquid.rotation.x = -Math.PI / 2
-    liquid.position.y = 0.98
+    // Quai: ống tròn chạy theo đường cong hình tai, hai đầu cắm vào thành tách
+    const handlePath = new THREE.CatmullRomCurve3([
+      [0.74, 0.92], [0.95, 0.98], [1.1, 0.8], [1.08, 0.55], [0.9, 0.4], [0.63, 0.38],
+    ].map(([x, y]) => new THREE.Vector3(x, y, 0)))
+    const handle = new THREE.Mesh(new THREE.TubeGeometry(handlePath, 64, 0.055, 20, false), porcelain)
 
-    const saucerProfile = [[0, 0], [1.2, 0.02], [1.34, 0.1], [1.3, 0.13], [0.62, 0.07], [0, 0.08]].map(([x, y]) => new THREE.Vector2(x, y))
-    const saucer = new THREE.Mesh(new THREE.LatheGeometry(saucerProfile, 96), ceramic)
-    saucer.position.y = -0.07
+    const rim = new THREE.Mesh(new THREE.TorusGeometry(0.792, 0.014, 16, 160), gold) // viền vàng miệng tách
+    rim.rotation.x = Math.PI / 2
+    rim.position.y = 1.13
 
-    // Bóng đổ mềm dưới đĩa (texture gradient tròn) -> tách "đứng" trên mặt phẳng, không lơ lửng
-    const sc = document.createElement('canvas')
-    sc.width = sc.height = 128
-    const sg = sc.getContext('2d')!
-    const grad = sg.createRadialGradient(64, 64, 0, 64, 64, 64)
-    grad.addColorStop(0, 'rgba(0,0,0,0.55)')
-    grad.addColorStop(0.55, 'rgba(0,0,0,0.25)')
-    grad.addColorStop(1, 'rgba(0,0,0,0)')
-    sg.fillStyle = grad
-    sg.fillRect(0, 0, 128, 128)
+    this.liquid = new THREE.Mesh(new THREE.CircleGeometry(1, 96),
+      new THREE.MeshPhysicalMaterial({ map: latteTexture(), roughness: 0.25, clearcoat: 0.8, clearcoatRoughness: 0.12, envMapIntensity: 0.6 }))
+    this.liquid.rotation.x = -Math.PI / 2
+    this.setLiquidLevel(LIQUID_FULL)
+
+    const saucerGroup = new THREE.Group()
+    const saucer = new THREE.Mesh(new THREE.LatheGeometry(profile([
+      [0, 0], [0.5, 0], [0.55, 0.03], [0.62, 0.06], [1.1, 0.09], [1.28, 0.15], [1.33, 0.17], [1.31, 0.185],
+      [1.25, 0.17], [1.08, 0.12], [0.66, 0.095], [0.6, 0.085], [0, 0.085],
+    ], 120), 160), porcelain)
+    const saucerRim = new THREE.Mesh(new THREE.TorusGeometry(1.318, 0.011, 12, 200), gold)
+    saucerRim.rotation.x = Math.PI / 2
+    saucerRim.position.y = 0.178
+    saucerGroup.add(saucer, saucerRim)
+    saucerGroup.position.y = -0.09
+
     const shadow = new THREE.Mesh(new THREE.PlaneGeometry(3.6, 3.6),
-      new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(sc), transparent: true, depthWrite: false, fog: false }))
+      new THREE.MeshBasicMaterial({ map: blobShadowTexture(), transparent: true, depthWrite: false, fog: false }))
     shadow.rotation.x = -Math.PI / 2
-    shadow.position.y = -0.09
+    shadow.position.y = -0.1
+    shadow.raycast = () => {} // bóng mờ rộng hơn đĩa: không tính là "bấm trúng tách"
 
-    this.cup.add(body, handle, liquid, saucer, shadow)
+    for (const m of [body, handle, saucer]) { m.castShadow = true; m.receiveShadow = true }
+    this.liquid.receiveShadow = true
+    this.cup.add(body, handle, rim, this.liquid, saucerGroup, shadow)
     this.cup.scale.setScalar(0.9)
     this.scene.add(this.cup)
   }
 
+  /** Mặt cà phê ở độ cao y (trong hệ tọa độ tách), bán kính khít lòng tách */
+  private setLiquidLevel(y: number) {
+    const r = innerRadius(y) - 0.005
+    this.liquid.position.y = y
+    this.liquid.scale.set(r, r, 1)
+  }
+
   private buildBeans() {
     const max = 28
-    const mesh = new THREE.InstancedMesh(beanGeometry(), new THREE.MeshStandardMaterial({ roughness: 0.42, metalness: 0.05 }), max)
-    const tones = ['#3f2314', '#4e2c18', '#5c3520'].map((c) => new THREE.Color(c))
+    // Lớp phủ bóng (clearcoat) như dầu trên hạt mới rang
+    const mesh = new THREE.InstancedMesh(beanGeometry(),
+      new THREE.MeshPhysicalMaterial({ roughness: 0.38, clearcoat: 0.7, clearcoatRoughness: 0.3, envMapIntensity: 0.9 }), max)
+    mesh.castShadow = true
+    const tones = ['#4a2716', '#5b311a', '#6a3a1e', '#3b1f12'].map((c) => new THREE.Color(c))
     // Rải hạt có kiểm soát (rejection sampling) quanh tách – tọa độ tính TỪ TÂM TÁCH:
     //  - không nằm trước thân tách (che "nhân vật chính")
     //  - phía chữ (x âm) chỉ cho hạt ở xa phía sau, để chữ luôn thoáng
@@ -303,6 +415,20 @@ export class CoffeeScene {
   setBackground(css: string) { this.fog.color.set(css) }
   /** x, y: -1..1 */
   setPointer(x: number, y: number) { this.pointerTarget.set(x, y) }
+  /** Chạy màn mở đầu sau `delay` giây (chờ màn chào biến mất) */
+  playIntro(delay: number) { this.introT = 0; this.introDelay = delay }
+
+  /** Tọa độ chuẩn hóa (-1..1, y hướng lên) có trúng tách/đĩa không */
+  hitTest(x: number, y: number) {
+    this.raycaster.setFromCamera(this.ndc.set(x, y), this.camera)
+    return this.raycaster.intersectObject(this.cup, true).length > 0
+  }
+
+  /** Bấm vào tách: tách xoay 1 vòng + nảy nhẹ, hạt văng ra rồi bay về */
+  burst() {
+    if (this.burstAt >= 0 && this.clock.elapsedTime - this.burstAt < 1.2) return
+    this.burstAt = this.clock.elapsedTime
+  }
 
   resize() {
     const parent = this.canvas.parentElement!
@@ -341,32 +467,56 @@ export class CoffeeScene {
     const c2 = smooth(0.18, 0.5, p) // chương 2: hạt đổ vào tách
     const c3 = smooth(0.58, 0.9, p) // chương 3: camera nhìn xuống latte
 
+    // ---- Màn mở đầu: tách bay lên & xoay, cà phê rót đầy dần, hạt bung ra ----
+    this.introT += dt
+    const it = this.introT - this.introDelay
+    const iRise = easeOutCubic(it / 1.3)
+    const iPop = easeOutBack(it / 1.4)
+    const iFill = smooth(0.5, 2.1, it)
+    const introSpin = (1 - easeOutCubic(it / 1.8)) * -Math.PI * 1.5
+
+    // ---- Bấm vào tách ----
+    const bu = this.burstAt >= 0 ? (t - this.burstAt) / 1.5 : 1
+    if (bu >= 1) this.burstAt = -1
+    const burstSpin = bu < 1 ? easeOutCubic(bu) * Math.PI * 2 : 0
+    const burstPush = bu < 1 ? Math.sin(Math.PI * clamp01(bu)) * (1 - bu * 0.3) : 0
+    const burstHop = bu < 1 ? Math.sin(Math.PI * clamp01(bu * 2.2)) * 0.18 : 0
+
     // Camera: chương 1 nhìn chếch xuống (thấy mặt latte) -> chương 2 vòng sang bên -> chương 3 từ trên xuống
     const dist = this.mobile ? 8.6 : 6.4
     const orbit = lerp(0, 0.75, c2) - lerp(0, 0.75, c3)
-    const camY = lerp(lerp(2.7, 3.0, c2), 4.1, c3)
-    const camR = lerp(dist, dist * 0.62, c3)
+    // Mobile: tách đặt cao (nửa trên màn hình) nên nâng camera theo để vẫn nhìn được vào lòng tách
+    const camY = lerp(lerp(2.7, 3.0, c2), 4.1, c3) + (this.mobile ? 1.6 : 0)
+    const camR = lerp(dist, dist * (this.mobile ? 0.85 : 0.62), c3)
     this.camera.position.set(Math.sin(orbit) * camR + this.pointer.x * 0.35, camY - this.pointer.y * 0.25, Math.cos(orbit) * camR)
-    this.camera.lookAt(0, lerp(0.55, 0.95, c3), 0)
+    this.camera.lookAt(0, lerp(0.55, 0.95, c3) + (this.mobile ? 0.25 : 0), 0)
 
     // Tách đổi bên mỗi chương (chữ nằm phía còn lại): phải -> trái -> phải
     const side = smooth(0.15, 0.42, p) * (1 - smooth(0.55, 0.82, p)) // 0 = tách bên phải, 1 = bên trái
     // màn hình càng rộng thì đẩy tách ra xa giữa hơn -> chữ lớn không bao giờ đè lên tách
     const halfW = Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2)) * dist * this.camera.aspect
-    const wide = THREE.MathUtils.clamp((halfW * 0.5) / 1.45, 0.9, 1.6)
+    const wide = THREE.MathUtils.clamp((halfW * 0.58) / 1.45, 0.9, 1.75)
     const offsetX = this.mobile ? 0 : lerp(lerp(1.45, -1.35, smooth(0.15, 0.42, p)), 1.25, smooth(0.55, 0.82, p)) * wide
     // Mobile: tách nằm nửa trên màn hình, chữ ở nửa dưới
-    this.cup.position.set(offsetX, this.mobile ? 1.15 : 0, 0)
+    this.cup.visible = it > 0
+    this.cup.position.set(offsetX, (this.mobile ? 1.15 : 0) + lerp(-1.6, 0, iRise) + burstHop, 0)
+    this.cup.scale.setScalar(0.9 * lerp(0.35, 1, iPop))
     // Quai tách luôn quay ra phía ngoài (xa chữ), hơi hướng về camera; lắc nhẹ thay vì quay tròn
     const baseRot = lerp(-0.55, Math.PI + 0.55, side) + orbit // + orbit: giữ góc quai so với camera khi camera bay vòng
-    const turn = dt ? 1 - Math.exp(-dt * 3) : 1
-    this.cup.rotation.y = lerp(this.cup.rotation.y, baseRot + Math.sin(t * 0.35) * 0.3 * (1 - c3), turn)
+    this.rotY = lerp(this.rotY, baseRot + Math.sin(t * 0.35) * 0.3 * (1 - c3), dt ? 1 - Math.exp(-dt * 3) : 1)
+    this.cup.rotation.y = this.rotY + introSpin + burstSpin
     this.cup.rotation.x = lerp(this.cup.rotation.x, this.pointer.y * 0.1, 0.1)
     this.cup.rotation.z = lerp(this.cup.rotation.z, -this.pointer.x * 0.06, 0.1)
+    this.setLiquidLevel(lerp(0.2, LIQUID_FULL, iFill))
+
+    // Đèn đổ bóng đi theo tách để bóng luôn rơi đúng lên đĩa
+    this.key.position.copy(this.cup.position).add(this.tmpA.set(-3, 5, 4))
+    this.key.target.position.copy(this.cup.position)
+    this.key.target.updateMatrixWorld()
 
     const steamU = (this.steam.material as THREE.ShaderMaterial).uniforms
     steamU.uTime.value = t
-    steamU.uOpacity.value = 1 - c2 * 0.5 + c3 * 0.3
+    steamU.uOpacity.value = (1 - c2 * 0.5 + c3 * 0.3) * smooth(1.6, 2.8, it)
     this.steam.position.set(this.cup.position.x, this.cup.position.y + 0.95, 0)
     this.steam.rotation.y = Math.atan2(this.camera.position.x - this.steam.position.x, this.camera.position.z)
 
@@ -389,6 +539,11 @@ export class CoffeeScene {
         (this.mobile ? Math.max(b.base.y, -0.2) : b.base.y) + Math.sin(t * 0.55 + i * 1.7) * 0.1 - this.pointer.y * par * 0.2,
         b.base.z * scatter,
       )
+      // bấm vào tách: hạt văng ra xa theo hướng từ tách rồi trôi về
+      if (burstPush) floatPos.addScaledVector(floatPos.clone().normalize(), burstPush * (1.2 + b.depth))
+      // mở đầu: hạt bung từ tâm tách ra vị trí của mình, lần lượt từng hạt
+      const bi = easeOutCubic((it - 0.6 - i * 0.03) / 1.3)
+      floatPos.lerp(this.tmpB.set(0, 0.6, 0), 1 - bi)
       const a = b.a + t * b.speed
       const fall = ((b.h + 0.8) / 3.2 + t * b.speed * 0.9) % 1 // 0..1: vị trí trên vòng xoáy rơi
       const swirl = a * 2.4
@@ -397,10 +552,10 @@ export class CoffeeScene {
       this.dummy.position.copy(floatPos).lerp(pourPos, k)
       this.dummy.position.x += cx
       this.dummy.position.y += cy
-      this.dummy.quaternion.setFromAxisAngle(b.axis, t * b.spin + i)
+      this.dummy.quaternion.setFromAxisAngle(b.axis, t * b.spin + i + burstPush * 6)
       // hạt "chìm" vào tách ở cuối vòng rơi
       const sink = k > 0 && fall > 0.9 ? 1 - ((fall - 0.9) / 0.1) * k : 1
-      this.dummy.scale.setScalar(b.scale * sink)
+      this.dummy.scale.setScalar(b.scale * sink * bi)
       this.dummy.updateMatrix()
       this.beans.setMatrixAt(i, this.dummy.matrix)
     })

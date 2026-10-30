@@ -107,6 +107,18 @@ Tự đánh giá ảnh chụp trang chủ của người dùng (màn 2550px) tr�
 | Các trang khác "phẳng", lệch phong cách trang chủ | Người dùng yêu cầu | Mỗi trang tự dựng tiêu đề | `<PageHero>` dùng chung, thẻ sản phẩm/footer/giỏ/thanh toán làm lại |
 | Nút "Thêm vào giỏ" bị xuống 2 dòng | Ảnh chụp 1440px | Cột thông tin hẹp | `whitespace-nowrap` + `min-w` |
 
+### Vòng 8 – "Tách cà phê trông như nhựa, muốn sang hơn, rực rỡ hơn, nhiều chuyển động hơn"
+
+Lần đầu có ảnh chụp từ máy thật có card đồ họa (các vòng trước chỉ xem được bản giả lập không có card đồ họa).
+
+| Vấn đề | Phát hiện bằng | Nguyên nhân | Sửa |
+|---|---|---|---|
+| Sứ trông như nhựa | Ảnh người dùng gửi | Môi trường phản chiếu mặc định là phòng xám, không có vệt sáng; không có bóng đổ | "Studio ảo" gồm các tấm đèn phát sáng làm môi trường phản chiếu (PMREM), shadow map thật, biên dạng làm mềm bằng spline, quai dạng ống, viền vàng kim |
+| Màu đơn điệu một tông nâu | Ảnh người dùng gửi | Chỉ có nền nâu + 1 quầng sáng | Đèn viền cam & hồng, mảng màu loang chuyển động, bụi sáng nhiều màu có đốm bokeh, 3 chương socola → caramel → xanh ngọc, chữ ánh vàng |
+| Thiếu chuyển động gây ấn tượng | Người dùng yêu cầu | — | Màn mở đầu (tách bay lên, cà phê rót đầy, hạt bung ra), bấm vào tách (xoay, hạt văng) |
+| Chữ chạm mép đĩa ở màn 2536px | Ảnh người dùng gửi | Tách chưa lùi đủ xa | Đẩy tách theo 58% nửa bề rộng khung nhìn, chữ nhỏ lại còn 4.6vw |
+| Mobile không thấy cà phê trong tách | Ảnh chụp 390px | Tách đặt cao, camera gần ngang miệng tách | Nâng camera theo vị trí tách trên mobile |
+
 ## 4. Lịch sử Git
 Mỗi giai đoạn là một commit riêng (`git log --oneline`): MVP → sửa ảnh → sửa quy tắc nghiệp vụ → biến thể + wishlist → nâng cấp chatbot → admin/UX → tài liệu. Thông điệp commit ghi rõ *làm gì và vì sao*, có thể dùng khi trình bày quy trình.
 

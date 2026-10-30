@@ -7,8 +7,8 @@ import { photo } from '../../lib/media'
 
 const FALLBACK_IMG = photo('1497515114629-f71d768fd07c')
 
-/** Màu nền cho từng chương (nội suy theo tiến độ cuộn) – kiểu Dogstudio */
-const BG = [[18, 13, 10], [84, 47, 22], [14, 20, 24]]
+/** Màu nền cho từng chương (nội suy theo tiến độ cuộn) – kiểu Dogstudio: socola -> caramel cháy -> xanh ngọc đậm */
+const BG = [[22, 13, 10], [112, 50, 18], [14, 38, 44]]
 const mixColor = (p: number) => {
   const seg = Math.min(BG.length - 2, Math.floor(p * (BG.length - 1)))
   const t = p * (BG.length - 1) - seg
@@ -31,6 +31,7 @@ export default function Immersive3D() {
   const sceneRef = useRef<CoffeeScene | null>(null)
   const [chapter, setChapter] = useState(0)
   const [failed, setFailed] = useState(false)
+  const [hint, setHint] = useState(true) // gợi ý "Chạm vào tách" – ẩn sau lần bấm đầu
   const ctaRef = useMagnetic<HTMLAnchorElement>(0.3)
 
   const sectionRef = useScrollProgress<HTMLElement>('through', (p) => {
@@ -58,6 +59,8 @@ export default function Immersive3D() {
       }
       sceneRef.current = scene
       const reduced = prefersReducedMotion()
+      // Màn mở đầu chạy sau khi màn chào (Preloader, chỉ hiện lần đầu vào web) đã kéo lên
+      if (!reduced) scene.playIntro(document.querySelector('[data-preloader]') ? 2.1 : 0.25)
       io = new IntersectionObserver(([e]) => (e.isIntersecting && !reduced ? scene.start() : scene.stop()))
       io.observe(canvas)
       ro = new ResizeObserver(() => scene.resize())
@@ -66,11 +69,26 @@ export default function Immersive3D() {
 
     const onMove = (e: PointerEvent) => sceneRef.current?.setPointer((e.clientX / innerWidth) * 2 - 1, (e.clientY / innerHeight) * 2 - 1)
     window.addEventListener('pointermove', onMove)
+    // Rê chuột lên tách -> con trỏ bàn tay; bấm -> tách xoay, hạt văng ra
+    const ndc = (e: PointerEvent | MouseEvent) => {
+      const r = canvas.getBoundingClientRect()
+      return [((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1] as const
+    }
+    const onHover = (e: PointerEvent) => { canvas.style.cursor = sceneRef.current?.hitTest(...ndc(e)) ? 'pointer' : '' }
+    const onClick = (e: MouseEvent) => {
+      if (!sceneRef.current?.hitTest(...ndc(e))) return
+      sceneRef.current.burst()
+      setHint(false)
+    }
+    canvas.addEventListener('pointermove', onHover)
+    canvas.addEventListener('click', onClick)
     return () => {
       disposed = true
       io?.disconnect()
       ro?.disconnect()
       window.removeEventListener('pointermove', onMove)
+      canvas.removeEventListener('pointermove', onHover)
+      canvas.removeEventListener('click', onClick)
       sceneRef.current?.dispose()
       sceneRef.current = null
     }
@@ -79,8 +97,13 @@ export default function Immersive3D() {
   return (
     <section ref={sectionRef} data-overlay-header className="relative h-[320vh]">
       <div ref={stageRef} className="sticky top-0 h-screen overflow-hidden text-latte-50" style={{ backgroundColor: mixColor(0) }}>
-        {/* Quầng sáng caramel phía sau tách */}
-        <div className="pointer-events-none absolute left-1/2 top-1/2 h-[70vh] w-[70vh] -translate-x-1/2 -translate-y-1/2 rounded-full bg-caramel-500/20 blur-[120px] lg:left-[62%]" />
+        {/* Quầng sáng caramel phía sau tách + các mảng màu loang trôi chậm (cực quang) -> nền rực mà vẫn sang */}
+        <div className="pointer-events-none absolute left-1/2 top-1/2 h-[70vh] w-[70vh] -translate-x-1/2 -translate-y-1/2 rounded-full bg-caramel-500/25 blur-[120px] lg:left-[66%]" />
+        <div className="aurora pointer-events-none absolute inset-0" aria-hidden>
+          <span style={{ background: '#f59e3b', left: '58%', top: '8%' }} />
+          <span style={{ background: '#e8457a', left: '72%', top: '48%', animationDelay: '-6s' }} />
+          <span style={{ background: '#f2c14e', left: '38%', top: '62%', animationDelay: '-12s' }} />
+        </div>
         {failed
           ? <img src={FALLBACK_IMG} alt="" className="absolute inset-0 h-full w-full object-cover opacity-60" />
           : <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" aria-label="Tách cà phê 3D" role="img" />}
@@ -99,10 +122,10 @@ export default function Immersive3D() {
                 {CHAPTERS[chapter].kicker}
               </p>
               {/* Cỡ chữ co giãn theo bề rộng màn hình; mỗi dòng không tự xuống hàng (giữ cụm "thủ công" liền nhau) */}
-              <h1 className="mt-5 font-display text-[clamp(2.9rem,5.2vw,7.5rem)] font-semibold leading-[0.95] tracking-tight [text-shadow:0_4px_30px_rgb(0_0_0/.45)]">
+              <h1 className="mt-5 font-display text-[clamp(2.9rem,4.6vw,7rem)] font-semibold leading-[0.95] tracking-tight [text-shadow:0_4px_30px_rgb(0_0_0/.45)]">
                 {CHAPTERS[chapter].lines.map((line, i) => (
                   <span key={i} className="block overflow-hidden pb-[0.12em]">
-                    <span className="editorial-line block sm:whitespace-nowrap [&_em]:font-normal [&_em]:italic [&_em]:text-caramel-400" style={{ '--l': i + 1 } as CSSProperties}>{line}</span>
+                    <span className="editorial-line block sm:whitespace-nowrap [&_em]:font-normal [&_em]:italic [&_em]:shimmer-gold" style={{ '--l': i + 1 } as CSSProperties}>{line}</span>
                   </span>
                 ))}
               </h1>
@@ -132,6 +155,11 @@ export default function Immersive3D() {
           <span className="relative h-28 w-px bg-white/20">
             <span className="absolute inset-x-0 top-0 bg-caramel-400" style={{ height: 'calc(var(--p, 0) * 100%)' }} />
           </span>
+        </div>
+        {/* Gợi ý tương tác với tách (chương 1) */}
+        <div className={`pointer-events-none absolute bottom-24 right-6 flex items-center gap-2.5 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-xs font-medium text-latte-100 backdrop-blur-md transition-all duration-500 sm:bottom-10 sm:right-24 ${chapter === 0 && hint ? 'opacity-100' : 'translate-y-2 opacity-0'}`} aria-hidden>
+          <span className="relative flex h-2.5 w-2.5"><span className="absolute inset-0 animate-ping rounded-full bg-caramel-400" /><span className="relative h-2.5 w-2.5 rounded-full bg-caramel-400" /></span>
+          Chạm vào tách cà phê
         </div>
         <div className={`absolute bottom-8 left-1/2 flex -translate-x-1/2 flex-col items-center gap-2 text-xs uppercase tracking-[0.3em] text-latte-300 transition-opacity duration-500 ${chapter === 0 ? 'opacity-100' : 'opacity-0'}`}>
           Cuộn <ArrowDown size={14} className="animate-bounce" />
